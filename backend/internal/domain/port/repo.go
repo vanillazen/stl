@@ -5,10 +5,12 @@ import (
 
 	"github.com/vanillazen/stl/backend/internal/domain/model"
 	"github.com/vanillazen/stl/backend/internal/infra/db"
+	"github.com/vanillazen/stl/backend/internal/sys"
 )
 
 type (
 	Repo interface {
+		sys.Core
 		DB(ctx context.Context) (db db.DB)
 	}
 

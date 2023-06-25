@@ -16,7 +16,7 @@ type (
 		Name() string
 		Log() log.Logger
 		Cfg() *config.Config
-		Setup(ctx context.Context)
+		Setup(ctx context.Context) error
 		Start(ctx context.Context) error
 		Stop(ctx context.Context) error
 	}
@@ -70,8 +70,9 @@ func (sc *SimpleCore) SetCfg(cfg *config.Config) {
 	sc.cfg = cfg
 }
 
-func (sc *SimpleCore) Setup(ctx context.Context) {
+func (sc *SimpleCore) Setup(ctx context.Context) error {
 	sc.Log().Infof("%s setup", sc.Name())
+	return nil
 }
 
 func (sc *SimpleCore) Start(ctx context.Context) error {

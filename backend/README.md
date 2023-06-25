@@ -13,7 +13,14 @@ STL is a simple example application that serves as a reference implementation fo
 To use the STL backend module, follow these steps:
 
 ```shell
-$ echo work in progres
+$ make run
+go run ./cmd/stl/main.go
+go run ./cmd/stl/main.go
+[INF] 2023/06/25 22:14:01 stl starting...
+[INF] 2023/06/25 22:14:01 stl started!
+[INF] 2023/06/25 22:14:01 list-repo start
+[INF] 2023/06/25 22:14:01 http-server started listening at localhost:8080
+[INF] 2023/06/25 22:14:01 sqlite-db database connected!
 ```
 
 ## Other Modules

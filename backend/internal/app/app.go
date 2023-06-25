@@ -10,7 +10,7 @@ import (
 	"github.com/vanillazen/stl/backend/internal/infra/db"
 	"github.com/vanillazen/stl/backend/internal/infra/db/sqlite"
 	http2 "github.com/vanillazen/stl/backend/internal/infra/http"
-	sqlite2 "github.com/vanillazen/stl/backend/internal/infra/sqlite"
+	sqliterepo "github.com/vanillazen/stl/backend/internal/infra/repo/sqlite"
 
 	"github.com/vanillazen/stl/backend/internal/sys"
 	"github.com/vanillazen/stl/backend/internal/sys/config"
@@ -25,7 +25,7 @@ type App struct {
 	supervisor sys.Supervisor
 	http       *http2.Server
 	db         db.DB
-	repo       port.Repo
+	repo       port.ListRepo
 	svc        service.ListService
 }
 
@@ -57,17 +57,16 @@ func (app *App) Run() (err error) {
 }
 
 func (app *App) Setup(ctx context.Context) error {
+	app.EnableSupervisor()
+
 	// Databases
-	dbase := sqlite.NewDB(app.opts...)
+	app.db = sqlite.NewDB(app.opts...)
 
 	// Repos
-	repo, err := sqlite2.NewListRepo(dbase, app.opts...)
-	if err != nil {
-		return err
-	}
+	app.repo = sqliterepo.NewListRepo(app.db, app.opts...)
 
 	// Services
-	app.svc = service.NewService(repo, app.opts...)
+	app.svc = service.NewService(app.repo, app.opts...)
 
 	// HTTP Server
 	app.http = http2.NewServer(app.svc, app.opts...)
@@ -79,20 +78,20 @@ func (app *App) Start(ctx context.Context) error {
 	app.Log().Infof("%s starting...", app.Name())
 	defer app.Log().Infof("%s stopped", app.Name())
 
-	err := app.db.Start(ctx)
-	if err != nil {
-		msg := fmt.Sprintf("%s start error", app.db.Name())
-		return errors.Wrap(msg, err)
-	}
-
-	err = app.svc.Start(ctx)
-	if err != nil {
-		return errors.Wrap("app start error", err)
-	}
-
 	app.supervisor.AddTasks(
+		//app.db.Start,
+		app.repo.Start,
+		app.svc.Start,
 		app.http.Start,
 		//app.grpc.Start,
+	)
+
+	app.supervisor.AddShutdownTasks(
+		app.http.Stop,
+		//app.grpc.Start,
+		app.svc.Stop,
+		app.repo.Stop,
+		//app.db.Stop,
 	)
 
 	app.Log().Infof("%s started!", app.Name())
@@ -106,4 +105,9 @@ func (app *App) Stop(ctx context.Context) error {
 
 func (app *App) Shutdown(ctx context.Context) error {
 	return nil
+}
+
+func (app *App) EnableSupervisor() {
+	name := fmt.Sprintf("%s-supervisor", app.Name())
+	app.supervisor = sys.NewSupervisor(name, true, app.opts)
 }

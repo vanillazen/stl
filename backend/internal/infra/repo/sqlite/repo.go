@@ -15,22 +15,17 @@ type ListRepo struct {
 	db db.DB
 }
 
-func NewListRepo(db db.DB, opts ...sys.Option) (*ListRepo, error) {
+func NewListRepo(db db.DB, opts ...sys.Option) *ListRepo {
 	return &ListRepo{
 		SimpleCore: sys.NewCore("list-repo", opts...),
 		db:         db,
-	}, nil
+	}
 }
 
 func (cr *ListRepo) Setup(ctx context.Context) error {
 	err := cr.db.Connect(ctx)
 	if err != nil {
 		err = errors.Wrap("list repo setup error", err)
-		return err
-	}
-
-	err = cr.db.Connect(ctx)
-	if err != nil {
 		return err
 	}
 
