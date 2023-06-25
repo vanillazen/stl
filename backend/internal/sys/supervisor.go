@@ -11,7 +11,7 @@ import (
 
 type (
 	Task     func(ctx context.Context) error
-	Teardown func()
+	Teardown func(ctx context.Context) error
 )
 
 type (
@@ -85,7 +85,7 @@ func (sv *supervisor) Wait() (err error) {
 
 	for _, tt := range sv.teardown {
 		teardown := tt
-		defer teardown()
+		defer teardown(ctx)
 	}
 
 	return eg.Wait()
