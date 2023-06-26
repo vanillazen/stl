@@ -42,7 +42,7 @@ By minimizing external dependencies and maximizing the utilization of Go's stand
 
 While abstractions are encouraged, the project prioritizes simplicity over complex architectures. The use of interfaces instead of directly using structs is welcomed as it allows for easy implementation changes and facilitates mocking during testing.
 
-Notes
+## Notes
 This project is intended to serve as a playground for experimentation and learning. It aims to develop a generator that simplifies the generation of similar projects based on the structure and patterns considered convenient within this implementation.
 
 ## License

@@ -59,6 +59,6 @@ func (db *DB) DBConn(ctx context.Context) (*sql.DB, error) {
 
 func (db *DB) dbPath() string {
 	cfg := db.Cfg()
-	dbPath := cfg.GetString(cfgKey.SQLiteDB)
+	dbPath := cfg.GetString(cfgKey.SQLiteFilePath)
 	return dbPath
 }

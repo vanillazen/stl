@@ -23,7 +23,6 @@ func newCfgKeyReg() *cfgKeyReg {
 
 		// SQLite
 
-		SQLiteFilePath: "db.sqlite.filepath",
 		SQLiteUser:     "db.sqlite.user",
 		SQLitePass:     "db.sqlite.pass",
 		SQLiteDB:       "db.sqlite.database",
@@ -31,6 +30,7 @@ func newCfgKeyReg() *cfgKeyReg {
 		SQLitePort:     "db.sqlite.port",
 		SQLiteSchema:   "db.sqlite.schema",
 		SQLiteSSL:      "db.sqlite.sslmode",
+		SQLiteFilePath: "db.sqlite.filepath",
 	}
 }
 
@@ -52,7 +52,6 @@ type cfgKeyReg struct {
 
 	// SQLite
 
-	SQLiteFilePath string
 	SQLiteUser     string
 	SQLitePass     string
 	SQLiteDB       string
@@ -60,4 +59,5 @@ type cfgKeyReg struct {
 	SQLitePort     string
 	SQLiteSchema   string
 	SQLiteSSL      string
+	SQLiteFilePath string
 }
