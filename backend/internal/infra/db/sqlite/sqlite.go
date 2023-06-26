@@ -39,17 +39,17 @@ func (db *DB) Connect(ctx context.Context) error {
 	sqlDB, err := sql.Open("sqlite3", db.dbPath())
 	if err != nil {
 		msg := fmt.Sprintf("%s connection error", db.Name())
-		return errors.Wrap(msg, err)
+		return errors.Wrap(err, msg)
 	}
 
 	err = sqlDB.Ping()
 	if err != nil {
 		msg := fmt.Sprintf("%s ping connection error", db.Name())
-		return errors.Wrap(msg, err)
+		return errors.Wrap(err, msg)
 	}
 
 	db.db = sqlDB
-	db.Log().Infof("%s database connected!", db.Name())
+	db.Log().Infof("%s database connected", db.Name())
 	return nil
 }
 
