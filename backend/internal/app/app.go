@@ -50,7 +50,7 @@ func (app *App) Run() (err error) {
 
 	err = app.Setup(ctx)
 	if err != nil {
-		return errors.Wrap(runError, err)
+		return errors.Wrap(err, runError)
 	}
 
 	return app.Start(ctx)
@@ -78,10 +78,21 @@ func (app *App) Start(ctx context.Context) error {
 	app.Log().Infof("%s starting...", app.Name())
 	defer app.Log().Infof("%s stopped", app.Name())
 
+	// Non-blocking sequential start
+	err := app.repo.Start(ctx)
+	if err != nil {
+		app.Log().Errorf("%s start error: %w", err)
+		return err
+	}
+
+	err = app.svc.Start(ctx)
+	if err != nil {
+		app.Log().Errorf("%s start error: %w", err)
+		return err
+	}
+
+	// Blocking non-sequential start
 	app.supervisor.AddTasks(
-		//app.db.Start,
-		app.repo.Start,
-		app.svc.Start,
 		app.http.Start,
 		//app.grpc.Start,
 	)
@@ -89,12 +100,9 @@ func (app *App) Start(ctx context.Context) error {
 	app.supervisor.AddShutdownTasks(
 		app.http.Stop,
 		//app.grpc.Start,
-		app.svc.Stop,
-		app.repo.Stop,
-		//app.db.Stop,
 	)
 
-	app.Log().Infof("%s started!", app.Name())
+	app.Log().Infof("%s started", app.Name())
 
 	return app.supervisor.Wait()
 }

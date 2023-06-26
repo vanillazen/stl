@@ -62,7 +62,7 @@ func (srv *Server) Start(ctx context.Context) error {
 
 	var group, errGrpCtx = errgroup.WithContext(ctx)
 	group.Go(func() error {
-		srv.Log().Infof("%s started listening at %s", srv.Name(), srv.Address())
+		srv.Log().Infof("%s listening at %s", srv.Name(), srv.Address())
 		defer srv.Log().Errorf("%s shutdown", srv.Name())
 
 		err := srv.Server.ListenAndServe()
