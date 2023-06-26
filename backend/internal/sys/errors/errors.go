@@ -6,7 +6,11 @@ type (
 	errors struct{}
 )
 
-func Wrap(message string, err error) error {
+func Wrap(err error, message string) error {
 	return fmt.Errorf("%s: %w", message, err)
 }
 
+func Wrapf(err error, format string, a ...any) error {
+	msg := fmt.Sprintf(format, a)
+	return Wrap(err, msg)
+}

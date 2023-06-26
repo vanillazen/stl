@@ -32,7 +32,7 @@ func (h *ListHandler) handleSuccess(w http.ResponseWriter, payload interface{}, 
 	w.WriteHeader(http.StatusOK)
 	err := json.NewEncoder(w).Encode(response)
 	if err != nil {
-		h.Log().Error(errors.Wrap("error encoding handler success", err))
+		h.Log().Error(errors.Wrap(err, "error encoding handler success"))
 	}
 
 	return
@@ -49,7 +49,7 @@ func (h *ListHandler) handleError(w http.ResponseWriter, handlerError error) {
 	w.WriteHeader(http.StatusInternalServerError)
 	err := json.NewEncoder(w).Encode(response)
 	if err != nil {
-		h.Log().Error(errors.Wrap("error encoding handler error", err))
+		h.Log().Error(errors.Wrap(err, "error encoding handler error"))
 	}
 
 	return

@@ -22,18 +22,34 @@ func NewListRepo(db db.DB, opts ...sys.Option) *ListRepo {
 	}
 }
 
+func (cr *ListRepo) DB(ctx context.Context) db.DB {
+	return cr.db
+}
+
 func (cr *ListRepo) Setup(ctx context.Context) error {
 	err := cr.db.Connect(ctx)
 	if err != nil {
-		err = errors.Wrap("list repo setup error", err)
+		err = errors.Wrap(err, "list repo setup error")
 		return err
 	}
 
 	return nil
 }
 
-func (cr *ListRepo) DB(ctx context.Context) db.DB {
-	return cr.db
+func (cr *ListRepo) Start(ctx context.Context) error {
+	cr.Log().Infof("%s started", cr.Name())
+	return nil
+}
+
+func (cr *ListRepo) Stop(ctx context.Context) error {
+	err := cr.DB(ctx).DB().Close()
+	if err != nil {
+		err := errors.Wrapf(err, "%s stop error", cr.Name())
+		return err
+	}
+
+	cr.Log().Infof("%s stopped", cr.Name())
+	return nil
 }
 
 func (cr *ListRepo) CreateList(ctx context.Context, m model.List) (model.List, error) {

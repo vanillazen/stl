@@ -72,7 +72,7 @@ func (h *ListHandler) List(r *http.Request) (listID string, err error) {
 // closeBody close the body and log errors if happened.
 func (h *ListHandler) closeBody(body io.ReadCloser) {
 	if err := body.Close(); err != nil {
-		h.Log().Error(errors.Wrap("failed to close body", err))
+		h.Log().Error(errors.Wrap(err, "failed to close body"))
 	}
 }
 

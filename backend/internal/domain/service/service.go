@@ -55,7 +55,7 @@ func (rs *List) CreateList(ctx context.Context, req t.CreateListReq) (res t.Crea
 	// Set Owner
 	user, err := rs.Repo().GetUser(ctx, req.UserID)
 	if err != nil {
-		err = errors.Wrap("create list error", err)
+		err = errors.Wrap(err, "create list error")
 		return t.NewCreateListRes(nil, err, rs.Cfg())
 	}
 
@@ -64,7 +64,7 @@ func (rs *List) CreateList(ctx context.Context, req t.CreateListReq) (res t.Crea
 	// Persist it
 	_, err = rs.Repo().CreateList(ctx, list)
 	if err != nil {
-		err = errors.Wrap("create list error", err)
+		err = errors.Wrap(err, "create list error")
 		return t.NewCreateListRes(nil, err, rs.Cfg())
 	}
 
@@ -81,7 +81,7 @@ func (rs *List) Start(ctx context.Context) error {
 	err := db.Start(ctx)
 	if err != nil {
 		msg := fmt.Sprintf("%s start error", rs.Name())
-		return errors.Wrap(msg, err)
+		return errors.Wrap(err, msg)
 	}
 
 	return nil
