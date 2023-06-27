@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"sync"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/vanillazen/stl/backend/internal/infra/db"
 	"github.com/vanillazen/stl/backend/internal/infra/db/sqlite"
 	http2 "github.com/vanillazen/stl/backend/internal/infra/http"
+	mig "github.com/vanillazen/stl/backend/internal/infra/migration/sqlite"
 	sqliterepo "github.com/vanillazen/stl/backend/internal/infra/repo/sqlite"
 
 	"github.com/vanillazen/stl/backend/internal/sys"
@@ -22,14 +24,16 @@ type App struct {
 	sync.Mutex
 	sys.Core
 	opts       []sys.Option
+	fs         embed.FS
 	supervisor sys.Supervisor
 	http       *http2.Server
 	db         db.DB
 	repo       port.ListRepo
+	migrator   *mig.Migrator // TODO: This will be a generic migrator interface.
 	svc        service.ListService
 }
 
-func NewApp(name, namespace string, log log.Logger) (app *App) {
+func NewApp(name, namespace string, fs embed.FS, log log.Logger) (app *App) {
 	cfg := config.Load(namespace)
 
 	opts := []sys.Option{
@@ -40,6 +44,7 @@ func NewApp(name, namespace string, log log.Logger) (app *App) {
 	app = &App{
 		Core: sys.NewCore(name, opts...),
 		opts: opts,
+		fs:   fs,
 	}
 
 	return app
@@ -62,6 +67,9 @@ func (app *App) Setup(ctx context.Context) error {
 	// Databases
 	app.db = sqlite.NewDB(app.opts...)
 
+	// Migration
+	app.migrator = mig.NewMigrator(app.fs, app.db, app.opts...)
+
 	// Repos
 	app.repo = sqliterepo.NewListRepo(app.db, app.opts...)
 
@@ -70,6 +78,12 @@ func (app *App) Setup(ctx context.Context) error {
 
 	// HTTP Server
 	app.http = http2.NewServer(app.svc, app.opts...)
+
+	err := app.db.Start(ctx)
+	if err != nil {
+		err = errors.Wrapf(err, "%s setup error", app.Name())
+		return err
+	}
 
 	return nil
 }
@@ -85,9 +99,15 @@ func (app *App) Start(ctx context.Context) error {
 		return err
 	}
 
+	err = app.migrator.Start(ctx)
+	if err != nil {
+		app.Log().Errorf("%s start error: %w", app.Name(), err)
+		return err
+	}
+
 	err = app.svc.Start(ctx)
 	if err != nil {
-		app.Log().Errorf("%s start error: %w", err)
+		app.Log().Errorf("%s start error: %w", app.Name(), err)
 		return err
 	}
 

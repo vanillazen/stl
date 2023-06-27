@@ -11,9 +11,9 @@ import (
 type LogLevel int
 
 const (
-	Error LogLevel = iota
+	Debug LogLevel = iota
 	Info
-	Debug
+	Error
 )
 
 type Logger interface {

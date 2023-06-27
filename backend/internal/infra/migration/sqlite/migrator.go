@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"fmt"
 	"log"
 	"os"
@@ -12,30 +13,32 @@ import (
 	"strings"
 	"time"
 
+	"github.com/vanillazen/stl/backend/internal/infra/db"
+	"github.com/vanillazen/stl/backend/internal/infra/db/sqlite"
 	"github.com/vanillazen/stl/backend/internal/sys"
+	"github.com/vanillazen/stl/backend/internal/sys/config"
 	"github.com/vanillazen/stl/backend/internal/sys/errors"
 	"github.com/vanillazen/stl/backend/internal/sys/uuid"
 )
 
 type (
-	// Fx type alias
-	Fx = func() error
+	// MigFx type alias
+	MigFx = func(tx *sql.Tx) error
 
 	// Migrator struct.
 	Migrator struct {
 		sys.Core
-		db     DB
-		schema string
-		dbPath string
-		migs   []*Migration
+		fs    embed.FS
+		db    db.DB
+		steps []*Migration
 	}
 
 	// Exec interface.
 	Exec interface {
-		Config(up Fx, down Fx)
+		Config(up MigFx, down MigFx)
 		GetName() (name string)
-		GetUp() (up Fx)
-		GetDown() (down Fx)
+		GetUp() (up MigFx)
+		GetDown() (down MigFx)
 		SetTx(tx *sql.Tx)
 		GetTx() (tx *sql.Tx)
 	}
@@ -56,59 +59,41 @@ type (
 	}
 )
 
-const (
-	sqlMigrationsTable = "migrations"
-
-	sqlCreateDbSt = `
-		CREATE DATABASE %s;`
-
-	sqlDropDbSt = `
-		DROP DATABASE %s;`
-
-	sqlCreateMigrationsSt = `CREATE TABLE %s.%s (
-		id UUID PRIMARY KEY,
-		name VARCHAR(64),
-		up_fx VARCHAR(64),
-		down_fx VARCHAR(64),
- 		is_applied BOOLEAN,
-		created_at TIMESTAMP
-	);`
-
-	sqlDropMigrationsSt = `DROP TABLE %s.%s;`
-
-	sqlSelMigrationSt = `SELECT is_applied FROM %s.%s WHERE name = '%s' and is_applied = true`
-
-	sqlRecMigrationSt = `INSERT INTO %s.%s (id, name, up_fx, down_fx, is_applied, created_at)
-		VALUES (:id, :name, :up_fx, :down_fx, :is_applied, :created_at);`
-
-	sqlDelMigrationSt = `DELETE FROM %s.%s WHERE name = '%s' and is_applied = true`
-)
-
 var (
 	matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 	matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
 )
 
-func NewMigrator(opts ...sys.Option) (mig *Migrator) {
-	return &Migrator{
+func NewMigrator(fs embed.FS, db db.DB, opts ...sys.Option) (mig *Migrator) {
+	m := &Migrator{
 		Core: sys.NewCore("migrator", opts...),
+		fs:   fs,
+		db:   db,
 	}
+
+	return m
 }
 
 func (m *Migrator) DB() *sql.DB {
-	return m.db.db
+	return m.db.DB()
 }
 
 func (m *Migrator) Start(ctx context.Context) error {
 	m.Log().Infof("%s started", m.db.Name())
-	return m.Connect()
+
+	err := m.addSteps()
+	if err != nil {
+		return errors.Wrapf(err, "%s start error", m.Name())
+	}
+
+	return m.Migrate()
 }
 
 func (m *Migrator) Connect() error {
-	sqlDB, err := sql.Open("sqlite3", m.db.dbPath())
+	path := m.Cfg().GetString(config.Key.SQLiteFilePath)
+	sqlDB, err := sql.Open("sqlite3", path)
 	if err != nil {
-		msg := fmt.Sprintf("%s connection error", m.db.Name())
-		return errors.Wrap(err, msg)
+		return errors.Wrapf(err, "%s connection error", m.db.Name())
 	}
 
 	err = sqlDB.Ping()
@@ -117,7 +102,7 @@ func (m *Migrator) Connect() error {
 		return errors.Wrap(err, msg)
 	}
 
-	m.db.db = sqlDB
+	m.db = sqlite.NewDB()
 	m.Log().Infof("%s database connected", m.db.Name())
 	return nil
 }
@@ -133,14 +118,14 @@ func (m *Migrator) GetTx() (tx *sql.Tx, err error) {
 }
 
 // PreSetup creates database
-// and migrations table if needed.
+// and migration table if needed.
 func (m *Migrator) PreSetup() (err error) {
-	if !m.dbExists() {
-		_, err = m.CreateDb()
-		if err != nil {
-			return err
-		}
-	}
+	//if !m.dbExists() {
+	//	_, err = m.CreateDb()
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 
 	if !m.migTableExists() {
 		_, err = m.createMigrationsTable()
@@ -154,7 +139,7 @@ func (m *Migrator) PreSetup() (err error) {
 
 // dbExists returns true if migrator referenced database has been already created.
 func (m *Migrator) dbExists() bool {
-	st := fmt.Sprintf("SELECT name FROM sqlite_master WHERE type='database' AND name='%s';", m.dbPath)
+	st := fmt.Sprintf("SELECT name FROM sqlite_master WHERE type='database' AND name='%s';", m.db.Name())
 
 	rows, err := m.DB().Query(st)
 	if err != nil {
@@ -176,9 +161,9 @@ func (m *Migrator) dbExists() bool {
 	return false
 }
 
-// migTableExists returns true if migrations table exists.
+// migTableExists returns true if migration table exists.
 func (m *Migrator) migTableExists() bool {
-	st := fmt.Sprintf("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';", m.dbPath)
+	st := fmt.Sprintf("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';", migrationsTable)
 
 	rows, err := m.DB().Query(st)
 	if err != nil {
@@ -203,19 +188,21 @@ func (m *Migrator) migTableExists() bool {
 
 // CreateDb migration.
 func (m *Migrator) CreateDb() (dbPath string, err error) {
-	_, err = m.CloseAppConns()
-	if err != nil {
-		return dbPath, errors.Wrap(err, "create db error")
-	}
+	// NOTE: Maybe this is not needed for SQLite
+	// Investigate.
+	//_, err = m.CloseAppConns()
+	//if err != nil {
+	//	return dbPath, errors.Wrap(err, "create db error")
+	//}
 
-	st := fmt.Sprintf(sqlCreateMigrationsSt, m.dbPath)
+	//st := fmt.Sprintf(createDBSt, m.db.Name())
 
-	_, err = m.DB().Exec(st)
-	if err != nil {
-		return m.dbPath, err
-	}
-
-	return m.dbPath, nil
+	//_, err = m.DB().Exec(st)
+	//if err != nil {
+	//	return m.db.Path(), err
+	//}
+	//
+	return m.db.Path(), nil
 }
 
 // DropDb migration.
@@ -228,36 +215,34 @@ func (m *Migrator) DropDb() (dbPath string, err error) {
 	// Close the SQLite connection before dropping the database file
 	err = m.DB().Close()
 	if err != nil {
-		m.Log().Errorf("drop dbPath error: %w", err) // NOTE: Maybe it was already closed.
+		m.Log().Errorf("drop dbPath error: %w", err) // Maybe it was already closed.
 	}
 
-	err = os.Remove(m.dbPath)
+	err = os.Remove(dbPath)
 	if err != nil {
-		return m.dbPath, err
+		return dbPath, err
 	}
 
-	return m.dbPath, nil
+	return dbPath, nil
 }
 
 func (m *Migrator) CloseAppConns() (string, error) {
-	dbName := m.Cfg().ValOrDef("sql.database", "")
+	dbName := m.Cfg().GetString(config.Key.SQLiteFilePath)
 
-	// Close all open connections associated with the database
 	err := m.DB().Close()
 	if err != nil {
 		return dbName, err
 	}
 
-	// Reopen the database connection for administrative tasks
-	adminConn, err := sql.Open("sqlite3", dbName)
+	adminConn, err := sql.Open("sqlite3", m.db.Name())
 	if err != nil {
 		return dbName, err
 	}
 	defer adminConn.Close()
 
-	// Terminate all connections to the database
-	st := `SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = $1;`
-	_, err = adminConn.Exec(st, dbName)
+	// Terminate all connections to the database (SQLite does not support concurrent connections)
+	st := fmt.Sprintf(`PRAGMA busy_timeout = 5000;`)
+	_, err = adminConn.Exec(st)
 	if err != nil {
 		return dbName, err
 	}
@@ -269,21 +254,21 @@ func (m *Migrator) CloseAppConns() (string, error) {
 func (m *Migrator) createMigrationsTable() (migTable string, err error) {
 	tx, err := m.GetTx()
 	if err != nil {
-		return migTable, errors.Wrap(err, "create migration table error")
+		return migTable, err
 	}
 
-	st := fmt.Sprintf(sqlCreateMigrationsSt, m.schema, sqlMigrationsTable)
+	st := fmt.Sprintf(createMigraationTableSt, migrationsTable)
 
 	_, err = tx.Exec(st)
 	if err != nil {
-		return sqlMigrationsTable, err
+		return migrationsTable, err
 	}
 
-	return sqlMigrationsTable, tx.Commit()
+	return migrationsTable, tx.Commit()
 }
 
-func (m *Migrator) AddMigration(e Exec) {
-	m.migs = append(m.migs, &Migration{Executor: e})
+func (m *Migrator) AddMigration(o int, e Exec) {
+	m.steps = append(m.steps, &Migration{Order: o, Executor: e})
 }
 
 func (m *Migrator) Migrate() (err error) {
@@ -292,10 +277,11 @@ func (m *Migrator) Migrate() (err error) {
 		return errors.Wrap(err, "migrate error")
 	}
 
-	for _, mg := range m.migs {
+	for i, _ := range m.steps {
+		mg := m.steps[i]
 		exec := mg.Executor
-		fn := getFxName(exec.GetUp())
-		name := migName(fn)
+		upFx := exec.GetUp()
+		name := exec.GetName()
 
 		// Continue if already applied
 		if !m.canApplyMigration(name) {
@@ -309,23 +295,17 @@ func (m *Migrator) Migrate() (err error) {
 			return errors.Wrap(err, "migrate error")
 		}
 
-		// Pass Tx to the executor
-		exec.SetTx(tx)
-
-		// Execute migration
-		values := reflect.ValueOf(exec).MethodByName(fn).Call([]reflect.Value{})
+		err = upFx(tx)
 
 		// Read error
-		err, ok := values[0].Interface().(error)
-		if !ok && err != nil {
-			m.Log().Infof("Migration not executed: %s", fn)   // TODO: Remove log
-			m.Log().Infof("Err  %+v' of type %T\n", err, err) // TODO: Remove log.
-			msg := fmt.Sprintf("migrate cannot run migration '%s': %s", fn, err.Error())
-			err = tx.Rollback()
-			if err != nil {
-				return errors.Wrap(err, "migrate rollback error")
+		if err != nil {
+			m.Log().Infof("Migration not executed: %s", name)
+			err2 := tx.Rollback()
+			if err2 != nil {
+				return errors.Wrap(err2, "migrate rollback error")
 			}
-			return errors.NewError(msg)
+
+			return errors.Wrapf(err, "cannot run migration '%s'", name)
 		}
 
 		// Register migration
@@ -333,7 +313,7 @@ func (m *Migrator) Migrate() (err error) {
 
 		err = tx.Commit()
 		if err != nil {
-			msg := fmt.Sprintf("Cannot update migrations table: %s\n", err.Error())
+			msg := fmt.Sprintf("Cannot update migration table: %s\n", err.Error())
 			m.Log().Errorf("migrate commit error: %s", msg)
 			err = tx.Rollback()
 			if err != nil {
@@ -342,13 +322,13 @@ func (m *Migrator) Migrate() (err error) {
 			return errors.NewError(msg)
 		}
 
-		log.Printf("Migration executed: %s\n", fn)
+		m.Log().Infof("Migration executed: %s", name)
 	}
 
 	return nil
 }
 
-// Rollback migrations.
+// Rollback migration.
 func (m *Migrator) Rollback(steps ...int) error {
 	// Default to 1 step if no value is provided
 	s := 1
@@ -366,7 +346,7 @@ func (m *Migrator) Rollback(steps ...int) error {
 	return nil
 }
 
-// RollbackAll migrations.
+// RollbackAll migration.
 func (m *Migrator) RollbackAll() error {
 	return m.rollback(m.count())
 }
@@ -376,7 +356,7 @@ func (m *Migrator) rollback(steps int) error {
 	stopAt := count - steps
 
 	for i := count - 1; i >= stopAt; i-- {
-		mg := m.migs[i]
+		mg := m.steps[i]
 		exec := mg.Executor
 		fn := getFxName(exec.GetDown())
 		// Migration name is associated to up migration
@@ -412,7 +392,7 @@ func (m *Migrator) rollback(steps int) error {
 
 		err = tx.Commit()
 		if err != nil {
-			msg := fmt.Sprintf("Cannot update migrations table: %s\n", err.Error())
+			msg := fmt.Sprintf("Cannot update migration table: %s\n", err.Error())
 			log.Printf("Commit error: %s", msg)
 			tx.Rollback()
 			return errors.NewError(msg)
@@ -461,11 +441,10 @@ func (m *Migrator) Reset() error {
 }
 
 func (m *Migrator) recMigration(e Exec) error {
-	st := fmt.Sprintf(sqlRecMigrationSt, m.schema, sqlMigrationsTable)
+	st := fmt.Sprintf(recMigrationSt, migrationsTable)
 	upFx := getFxName(e.GetUp())
 	downFx := getFxName(e.GetDown())
 	name := migName(upFx)
-	log.Printf("%+s", upFx)
 
 	uid, err := uuid.New()
 	if err != nil {
@@ -482,14 +461,14 @@ func (m *Migrator) recMigration(e Exec) error {
 	)
 
 	if err != nil {
-		return errors.Wrap(err, "cannot update migrations table")
+		return errors.Wrap(err, "cannot update migration table")
 	}
 
 	return nil
 }
 
 func (m *Migrator) cancelRollback(name string) bool {
-	st := fmt.Sprintf(sqlSelMigrationSt, m.schema, sqlMigrationsTable, name)
+	st := fmt.Sprintf(selMigrationSt, migrationsTable, name)
 	r, err := m.DB().Query(st)
 
 	if err != nil {
@@ -512,7 +491,7 @@ func (m *Migrator) cancelRollback(name string) bool {
 }
 
 func (m *Migrator) canApplyMigration(name string) bool {
-	st := fmt.Sprintf(sqlSelMigrationSt, m.schema, sqlMigrationsTable, name)
+	st := fmt.Sprintf(selMigrationSt, migrationsTable, name)
 	r, err := m.DB().Query(st)
 
 	if err != nil {
@@ -536,18 +515,18 @@ func (m *Migrator) canApplyMigration(name string) bool {
 
 func (m *Migrator) delMigration(e Exec) error {
 	name := migName(getFxName(e.GetUp()))
-	st := fmt.Sprintf(sqlDelMigrationSt, m.schema, sqlMigrationsTable, name)
+	st := fmt.Sprintf(delMigrationSt, migrationsTable, name)
 	_, err := e.GetTx().Exec(st)
 
 	if err != nil {
-		return errors.Wrap(err, "cannot update migrations table")
+		return errors.Wrap(err, "cannot update migration table")
 	}
 
 	return nil
 }
 
 func (m *Migrator) count() (last int) {
-	return len(m.migs)
+	return len(m.steps)
 }
 
 func (m *Migrator) last() (last int) {

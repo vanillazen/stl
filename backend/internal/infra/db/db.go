@@ -11,6 +11,9 @@ type (
 	DB interface {
 		sys.Core
 		DB() *sql.DB
+		Path() string
+		Schema() string
+		Name() string
 		Connect(ctx context.Context) error
 	}
 )

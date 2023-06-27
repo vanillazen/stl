@@ -26,16 +26,6 @@ func (r *ListRepo) DB(ctx context.Context) db.DB {
 	return r.db
 }
 
-func (r *ListRepo) Setup(ctx context.Context) error {
-	err := r.db.Connect(ctx)
-	if err != nil {
-		err = errors.Wrap(err, "list repo setup error")
-		return err
-	}
-
-	return nil
-}
-
 func (r *ListRepo) Start(ctx context.Context) error {
 	r.Log().Infof("%s started", r.Name())
 	return nil
