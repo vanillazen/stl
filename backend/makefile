@@ -10,5 +10,5 @@ build:
 
 .PHONY: run
 run:
-	go run ./cmd/$(app)/main.go
+	go run main.go
 

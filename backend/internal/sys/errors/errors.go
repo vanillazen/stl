@@ -11,6 +11,6 @@ func Wrap(err error, message string) error {
 }
 
 func Wrapf(err error, format string, a ...any) error {
-	msg := fmt.Sprintf(format, a)
+	msg := fmt.Sprintf(format, a...)
 	return Wrap(err, msg)
 }

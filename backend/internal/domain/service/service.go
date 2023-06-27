@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/vanillazen/stl/backend/internal/domain/port"
 	"github.com/vanillazen/stl/backend/internal/sys"
@@ -73,16 +72,4 @@ func (rs *List) CreateList(ctx context.Context, req t.CreateListReq) (res t.Crea
 
 func (rs *List) Repo() port.ListRepo {
 	return rs.repo
-}
-
-func (rs *List) Start(ctx context.Context) error {
-	db := rs.repo.DB(ctx)
-
-	err := db.Start(ctx)
-	if err != nil {
-		msg := fmt.Sprintf("%s start error", rs.Name())
-		return errors.Wrap(err, msg)
-	}
-
-	return nil
 }

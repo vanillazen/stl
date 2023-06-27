@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3" // SQLite driver import
 
@@ -36,7 +38,7 @@ func (db *DB) Start(ctx context.Context) error {
 }
 
 func (db *DB) Connect(ctx context.Context) error {
-	sqlDB, err := sql.Open("sqlite3", db.dbPath())
+	sqlDB, err := sql.Open("sqlite3", db.Path())
 	if err != nil {
 		msg := fmt.Sprintf("%s connection error", db.Name())
 		return errors.Wrap(err, msg)
@@ -57,8 +59,28 @@ func (db *DB) DBConn(ctx context.Context) (*sql.DB, error) {
 	return db.db, nil
 }
 
-func (db *DB) dbPath() string {
+func (db *DB) Schema() string {
+	cfg := db.Cfg()
+	dbPath := cfg.GetString(cfgKey.SQLiteSchema)
+	return dbPath
+}
+
+func (db *DB) Name() string {
+	cfg := db.Cfg()
+	dbPath := cfg.GetString(cfgKey.SQLiteDB)
+	return dbPath
+}
+
+func (db *DB) Path() string {
 	cfg := db.Cfg()
 	dbPath := cfg.GetString(cfgKey.SQLiteFilePath)
 	return dbPath
+}
+
+func DBNameFromFile(filePath string) string {
+	fileName := filepath.Base(filePath)
+	fileName = strings.TrimSuffix(fileName, filepath.Ext(fileName))
+	fileName = strings.ToLower(fileName)
+
+	return fileName
 }
