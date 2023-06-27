@@ -45,6 +45,8 @@ While abstractions are encouraged, the project prioritizes simplicity over compl
 ## Notes
 This project is intended to serve as a playground for experimentation and learning. It aims to develop a generator that simplifies the generation of similar projects based on the structure and patterns considered convenient within this implementation.
 
+Additional updates [here](docs/notes.md)
+
 ## License
 
 This project is licensed under the MIT License. Feel free to use and modify it as per the terms of the license.
