@@ -6,8 +6,7 @@ const (
 	createDBSt = `
 		CREATE DATABASE %s;`
 
-	dropDBSt = `
-		DROP DATABASE %s;`
+	dropDBSt = `DROP DATABASE %s;`
 
 	createMigraationTableSt = `CREATE TABLE %s (
     id UUID PRIMARY KEY,
@@ -19,10 +18,8 @@ const (
 
 	selMigrationSt = `SELECT (COUNT(*) > 0) AS record_exists FROM %s WHERE name = '%s'`
 
-	recMigrationSt = `
-	INSERT INTO %s (id, name, created_at)
+	recMigrationSt = `INSERT INTO %s (id, name, created_at)
 	VALUES (:id, :name, :created_at);`
 
-	delMigrationSt = `DELETE FROM %s 
-       WHERE name = '%s'`
+	delMigrationSt = `DELETE FROM %s WHERE name = '%s'`
 )
