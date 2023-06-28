@@ -30,7 +30,7 @@ type (
 		sys.Core
 		fs    embed.FS
 		db    db.DB
-		steps []*Migration
+		steps []Migration
 	}
 
 	// Exec interface.
@@ -52,10 +52,7 @@ type (
 	migRecord struct {
 		ID        uuid.UUID      `dbPath:"id" json:"id"`
 		Name      sql.NullString `dbPath:"name" json:"name"`
-		UpFx      sql.NullString `dbPath:"up_fx" json:"upFx"`
-		DownFx    sql.NullString `dbPath:"down_fx" json:"downFx"`
-		IsApplied sql.NullBool   `dbPath:"is_applied" json:"isApplied"`
-		CreatedAt NullTime       `dbPath:"created_at" json:"createdAt"`
+		CreatedAt db.NullTime    `dbPath:"created_at" json:"createdAt"`
 	}
 )
 
@@ -120,13 +117,6 @@ func (m *Migrator) GetTx() (tx *sql.Tx, err error) {
 // PreSetup creates database
 // and migration table if needed.
 func (m *Migrator) PreSetup() (err error) {
-	//if !m.dbExists() {
-	//	_, err = m.CreateDb()
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
-
 	if !m.migTableExists() {
 		_, err = m.createMigrationsTable()
 		if err != nil {
@@ -188,20 +178,7 @@ func (m *Migrator) migTableExists() bool {
 
 // CreateDb migration.
 func (m *Migrator) CreateDb() (dbPath string, err error) {
-	// NOTE: Maybe this is not needed for SQLite
-	// Investigate.
-	//_, err = m.CloseAppConns()
-	//if err != nil {
-	//	return dbPath, errors.Wrap(err, "create db error")
-	//}
-
-	//st := fmt.Sprintf(createDBSt, m.db.Name())
-
-	//_, err = m.DB().Exec(st)
-	//if err != nil {
-	//	return m.db.Path(), err
-	//}
-	//
+	// NOTE: Not really required for SQLite
 	return m.db.Path(), nil
 }
 
@@ -261,14 +238,19 @@ func (m *Migrator) createMigrationsTable() (migTable string, err error) {
 
 	_, err = tx.Exec(st)
 	if err != nil {
-		return migrationsTable, err
+		err2 := tx.Rollback()
+		if err2 != nil {
+			return migTable, err
+		}
+		return migTable, err
 	}
 
 	return migrationsTable, tx.Commit()
 }
 
 func (m *Migrator) AddMigration(o int, e Exec) {
-	m.steps = append(m.steps, &Migration{Order: o, Executor: e})
+	mig := Migration{Order: o, Executor: e}
+	m.steps = append(m.steps, mig)
 }
 
 func (m *Migrator) Migrate() (err error) {
@@ -283,23 +265,23 @@ func (m *Migrator) Migrate() (err error) {
 		upFx := exec.GetUp()
 		name := exec.GetName()
 
-		// Continue if already applied
-		if !m.canApplyMigration(name) {
-			m.Log().Infof("Migration '%s' already applied.", name)
-			continue
-		}
-
 		// Get a new Tx from migrator
 		tx, err := m.GetTx()
 		if err != nil {
 			return errors.Wrap(err, "migrate error")
 		}
 
+		//Continue if already applied
+		if !m.canApplyMigration(name, tx) {
+			m.Log().Infof("Migration '%s' already applied.", name)
+			continue
+		}
+
 		err = upFx(tx)
 
 		// Read error
 		if err != nil {
-			m.Log().Infof("Migration not executed: %s", name)
+			m.Log().Infof("%s migration not executed", name)
 			err2 := tx.Rollback()
 			if err2 != nil {
 				return errors.Wrap(err2, "migrate rollback error")
@@ -309,6 +291,7 @@ func (m *Migrator) Migrate() (err error) {
 		}
 
 		// Register migration
+		exec.SetTx(tx)
 		err = m.recMigration(exec)
 
 		err = tx.Commit()
@@ -442,22 +425,15 @@ func (m *Migrator) Reset() error {
 
 func (m *Migrator) recMigration(e Exec) error {
 	st := fmt.Sprintf(recMigrationSt, migrationsTable)
-	upFx := getFxName(e.GetUp())
-	downFx := getFxName(e.GetDown())
-	name := migName(upFx)
-
 	uid, err := uuid.New()
 	if err != nil {
 		return errors.Wrap(err, "rec migration error")
 	}
 
-	_, err = m.DB().Exec(st,
-		uid,
-		ToNullString(name),
-		ToNullString(upFx),
-		ToNullString(downFx),
-		ToNullBool(true),
-		ToNullTime(time.Time{}),
+	_, err = e.GetTx().Exec(st,
+		ToNullString(uid.Val),
+		ToNullString(e.GetName()),
+		ToNullString(time.Now().Format(time.RFC3339)),
 	)
 
 	if err != nil {
@@ -490,9 +466,9 @@ func (m *Migrator) cancelRollback(name string) bool {
 	return true
 }
 
-func (m *Migrator) canApplyMigration(name string) bool {
+func (m *Migrator) canApplyMigration(name string, tx *sql.Tx) bool {
 	st := fmt.Sprintf(selMigrationSt, migrationsTable, name)
-	r, err := m.DB().Query(st)
+	r, err := tx.Query(st)
 
 	if err != nil {
 		m.Log().Errorf("Cannot determine migration status: %w", err)
@@ -500,14 +476,14 @@ func (m *Migrator) canApplyMigration(name string) bool {
 	}
 
 	for r.Next() {
-		var applied sql.NullBool
-		err = r.Scan(&applied)
+		var exists sql.NullBool
+		err = r.Scan(&exists)
 		if err != nil {
 			m.Log().Errorf("Cannot determine migration status: %s", err)
 			return false
 		}
 
-		return !applied.Bool
+		return !exists.Bool
 	}
 
 	return true
@@ -553,13 +529,8 @@ func toSnakeCase(str string) string {
 	return strings.ToLower(snake)
 }
 
-type NullTime struct {
-	Time  time.Time
-	Valid bool // Indicates if the timestamp is null or not
-}
-
-func ToNullTime(t time.Time) NullTime {
-	return NullTime{
+func ToNullTime(t time.Time) db.NullTime {
+	return db.NullTime{
 		Time:  t,
 		Valid: true,
 	}

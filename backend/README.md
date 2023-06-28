@@ -15,11 +15,16 @@ To use the STL backend module, follow these steps:
 ```shell
 $ make run
 go run ./cmd/stl/main.go
-[INF] 2023/06/26 10:31:46 stl starting...
-[INF] 2023/06/26 10:31:46 list-repo started
-[INF] 2023/06/26 10:31:46 sqlite-db database connected
-[INF] 2023/06/26 10:31:46 stl started
-[INF] 2023/06/26 10:31:46 http-server listening at localhost:8080
+[INF] 2023/06/28 11:32:19 stl database connected
+[INF] 2023/06/28 11:32:19 stl starting...
+[INF] 2023/06/28 11:32:19 list-repo started
+[INF] 2023/06/28 11:32:19 stl started
+[INF] 2023/06/28 11:32:19 Migration 'users' already applied.
+[INF] 2023/06/28 11:32:19 Migration 'lists' already applied.
+[INF] 2023/06/28 11:32:19 Migration 'tasks' already applied.
+[INF] 2023/06/28 11:32:19 list-service start
+[INF] 2023/06/28 11:32:19 stl started
+[INF] 2023/06/28 11:32:19 http-server listening at localhost:8080
 ```
 
 ## Other Modules

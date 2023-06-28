@@ -88,26 +88,26 @@ func (app *App) Setup(ctx context.Context) error {
 	return nil
 }
 
-func (app *App) Start(ctx context.Context) error {
+func (app *App) Start(ctx context.Context) (err error) {
 	app.Log().Infof("%s starting...", app.Name())
 	defer app.Log().Infof("%s stopped", app.Name())
 
-	// Non-blocking sequential start
-	err := app.repo.Start(ctx)
+	//// Non-blocking sequential start
+	err = app.repo.Start(ctx)
 	if err != nil {
-		app.Log().Errorf("%s start error: %w", err)
+		app.Log().Errorf("%s start error: %s", err)
 		return err
 	}
 
 	err = app.migrator.Start(ctx)
 	if err != nil {
-		app.Log().Errorf("%s start error: %w", app.Name(), err)
+		app.Log().Errorf("%s start error: %s", app.Name(), err)
 		return err
 	}
 
 	err = app.svc.Start(ctx)
 	if err != nil {
-		app.Log().Errorf("%s start error: %w", app.Name(), err)
+		app.Log().Errorf("%s start error: %s", app.Name(), err)
 		return err
 	}
 
