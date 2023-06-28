@@ -26,7 +26,6 @@ func main() {
 
 	err := app.Run()
 	if err != nil {
-		log.Errorf("%s exit error: %s", app.Name(), err.Error())
 		os.Exit(1)
 	}
 }
