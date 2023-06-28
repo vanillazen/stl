@@ -23,21 +23,22 @@ func (m *Migrator) addSteps() error {
 	for i, q := range qq {
 		s := &step{
 			Name: q.Name,
-			Up: func(tx *sql.Tx) error {
-				_, err := tx.Exec(q.Up)
-				m.Log().Error(err)
-				return err
-			},
-			Down: func(tx *sql.Tx) error {
-				_, err := tx.Exec(q.Down)
-				return err
-			},
+			Up:   m.genTxExecFunc(q.Up),
+			Down: m.genTxExecFunc(q.Down),
 		}
 
 		m.AddMigration(i, s)
 	}
 
 	return nil
+}
+
+func (m *Migrator) genTxExecFunc(query string) func(tx *sql.Tx) error {
+	return func(tx *sql.Tx) error {
+		_, err := tx.Exec(query)
+		//m.Log().Debugf("%s", err.Error())
+		return err
+	}
 }
 
 type queries struct {

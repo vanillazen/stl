@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"unicode"
 )
 
 type LogLevel int
@@ -73,13 +74,14 @@ func (l *SimpleLogger) Infof(format string, a ...any) {
 	}
 }
 
-func (l *SimpleLogger) Error(v ...any) {
+func (l *SimpleLogger) Error(v ...interface{}) {
 	if l.logLevel <= Error {
-		l.error.Println(v...)
+		message := fmt.Sprint(v...)
+		l.error.Println(message)
 	}
 }
 
-func (l *SimpleLogger) Errorf(format string, a ...any) {
+func (l *SimpleLogger) Errorf(format string, a ...interface{}) {
 	if l.logLevel <= Error {
 		message := fmt.Sprintf(format, a...)
 		l.error.Println(message)
@@ -117,4 +119,10 @@ func (sl *SimpleLogger) SetInfoOutput(info *bytes.Buffer) {
 // Used for package testing.
 func (sl *SimpleLogger) SetErrorOutput(error *bytes.Buffer) {
 	sl.error = log.New(error, "", 0)
+}
+
+func capitalize(str string) string {
+	runes := []rune(str)
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
 }
