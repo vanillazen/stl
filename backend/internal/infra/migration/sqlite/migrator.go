@@ -274,12 +274,12 @@ func (m *Migrator) Migrate() (err error) {
 		//Continue if already applied
 		if !m.canApplyMigration(name, tx) {
 			m.Log().Infof("Migration '%s' already applied.", name)
+			_ := tx.Commit() // No need to handle eventual error here
 			continue
 		}
 
 		err = upFx(tx)
 
-		// Read error
 		if err != nil {
 			m.Log().Infof("%s migration not executed", name)
 			err2 := tx.Rollback()
