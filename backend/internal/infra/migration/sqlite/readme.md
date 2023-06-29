@@ -66,9 +66,9 @@ import (
 var fs embed.FS
 
 // ...
-migratorInstance := migrator.NewMigrator(fs, db, opts)
+mig := migrator.NewMigrator(fs, db, opts)
 
-err := migratorInstance.Migrate() // Apply the pending migrations
+err := mig.Migrate() // Apply the pending migrations
 if err != nil {
     // Handle error
 }
@@ -76,7 +76,7 @@ if err != nil {
 
 Here, `fs` represents the embedded filesystem that contains the migration files. The migrations are stored in the `assets/migrations/sqlite/` directory within the embedded filesystem. The `//go:embed` directive is used to include these migration files in the embedded filesystem.
 
-The migrator uses the file names to infer the migration index and name. For example, a migration file named `00000001-users.sql` would be represented in the database as:
+The migrator uses the file names to infer the migration index and name. For example, the `Up` migration from file named `00000001-users.sql` would be represented in the database as when executed.
 
 ```
 id: 5034c845-4e0f-43ae-ae73-325dc91d1f37
@@ -89,33 +89,23 @@ creaed_at: 2023-06-29T20:46:56+02:00
 
 If you need to revert a migration, the Migrator package provides two options: `Rollback()` and `RollbackAll()`.
 
+```go
+err := migratorInstance.Rollback(2) // Rollback the last 2 migrations
+if err != nil {
+    // Handle error
+}
+
+```
+
 The `Rollback()` function rolls back a specific number of migrations. In the example above, the last two migrations will be reverted. If no value is provided to `Rollback()`, it assumes that you want to rollback only the last migration. If n > total number of migrations then all migrations are rolled back (similar to RollbackAll()).
 
 To rollback all migrations, you can use the `RollbackAll()` function:
 
 ```go
-err := migratorInstance.RollbackAll() // Rollback all migrations
+err := mig.RollbackAll() // Rollback all migrations
 if err != nil {
     // Handle error
 }
 ```
 
 The `RollbackAll()` function reverts all applied migrations, effectively rolling back the entire database schema to its initial state.
-
-### Additional Configuration
-
-The migrator provides options that allow you to configure its behavior. The `NewMigrator()` function accepts a slice of options that you can use to customize the migrator.
-
-```go
-import (
-	...
-	"github.com/vanillazen/stl/backend/internal/infra/migration/sqlite"
-	...
-)
-
-
-migratorInstance := migrator.NewMigrator(fs, db, migrator.WithConfig(cfg), migrator.WithLogger(log))
-```
-
-Here, `WithConfig()` is an option that sets the configuration for the migrator, and `WithLogger()` is an option that sets the logger to be used. You can define your own custom options as per your requirements.
-
