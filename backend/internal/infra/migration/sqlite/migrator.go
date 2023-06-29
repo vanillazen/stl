@@ -38,7 +38,6 @@ func (m *Migrator) addSteps() error {
 func (m *Migrator) genTxExecFunc(query string) func(tx *sql.Tx) error {
 	return func(tx *sql.Tx) error {
 		_, err := tx.Exec(query)
-		//m.Log().Debugf("%s", err.Error())
 		return err
 	}
 }
