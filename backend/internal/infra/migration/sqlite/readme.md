@@ -66,7 +66,7 @@ import (
 var fs embed.FS
 
 // ...
-migratorInstance := migrator.NewMigrator(fs, db, opts...) // Create a new instance of the migrator
+migratorInstance := migrator.NewMigrator(fs, db, opts)
 
 err := migratorInstance.Migrate() // Apply the pending migrations
 if err != nil {
@@ -107,7 +107,12 @@ The `RollbackAll()` function reverts all applied migrations, effectively rolling
 The migrator provides options that allow you to configure its behavior. The `NewMigrator()` function accepts a slice of options that you can use to customize the migrator.
 
 ```go
-import "github.com/your-package/migrator"
+import (
+	...
+	"github.com/vanillazen/stl/backend/internal/infra/migration/sqlite"
+	...
+)
+
 
 migratorInstance := migrator.NewMigrator(fs, db, migrator.WithConfig(cfg), migrator.WithLogger(log))
 ```

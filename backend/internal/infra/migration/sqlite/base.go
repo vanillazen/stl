@@ -280,7 +280,7 @@ func (m *Migrator) Migrate() (err error) {
 
 		//Continue if already applied
 		if !m.canApplyMigration(idx, name, tx) {
-			m.Log().Infof("Migration '%s' already applied.", name)
+			m.Log().Infof("Migration '%s' already applied", name)
 			tx.Commit() // No need to handle eventual error here
 			continue
 		}
@@ -361,7 +361,7 @@ func (m *Migrator) rollback(steps int) error {
 
 		// Continue if already applied
 		if !m.canApplyRollback(idx, name, tx) {
-			m.Log().Infof("Rollback '%s' cannot be executed.", name)
+			m.Log().Infof("Rollback '%s' cannot be executed", name)
 			tx.Commit() // No need to handle eventual error here
 			continue
 		}
