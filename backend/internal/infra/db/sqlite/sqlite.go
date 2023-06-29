@@ -38,7 +38,7 @@ func (db *DB) Start(ctx context.Context) error {
 }
 
 func (db *DB) Connect(ctx context.Context) error {
-	sqlDB, err := sql.Open("sqlite3", db.Path())
+	sqlDB, err := sql.Open("sqlite3", db.Path()+"?_journal_mode=WAL")
 	if err != nil {
 		msg := fmt.Sprintf("%s connection error", db.Name())
 		return errors.Wrap(err, msg)
