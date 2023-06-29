@@ -81,7 +81,7 @@ The migrator uses the file names to infer the migration index and name. For exam
 ```
 id: 5034c845-4e0f-43ae-ae73-325dc91d1f37
 idx: 1
-name: users
+name: create-table-users
 creaed_at: 2023-06-29T20:46:56+02:00
 ```
 
