@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	migTable = "migration"
+	migTable = "migrations"
 )
 
 type (
@@ -94,7 +94,8 @@ func (m *Migrator) Start(ctx context.Context) error {
 
 func (m *Migrator) Connect() error {
 	path := m.Cfg().GetString(config.Key.SQLiteFilePath)
-	sqlDB, err := sql.Open("sqlite3", path)
+	//sqlDB, err := sql.Open("sqlite3", path)
+	sqlDB, err := sql.Open("sqlite3", path+"?_journal_mode=WAL")
 	if err != nil {
 		return errors.Wrapf(err, "%s connection error", m.db.Name())
 	}
@@ -233,7 +234,6 @@ func (m *Migrator) CloseAppConns() (string, error) {
 	return dbName, nil
 }
 
-// DropDb migration.
 func (m *Migrator) createMigrationsTable() (err error) {
 	tx, err := m.GetTx()
 	if err != nil {
@@ -268,9 +268,9 @@ func (m *Migrator) Migrate() (err error) {
 	for i, _ := range m.steps {
 		mg := m.steps[i]
 		exec := mg.Executor
-		upFx := exec.GetUp()
 		idx := exec.GetIndex()
 		name := exec.GetName()
+		upFx := exec.GetUp()
 
 		// Get a new Tx from migrator
 		tx, err := m.GetTx()
@@ -342,32 +342,27 @@ func (m *Migrator) RollbackAll() error {
 }
 
 func (m *Migrator) rollback(steps int) error {
+	processed := 0
 	count := m.count()
-	stopAt := count - steps
+	//stopAt := count - steps
 
-	for i := count - 1; i >= stopAt; i-- {
+	for i := count - 1; i >= 0; i-- {
 		mg := m.steps[i]
 		exec := mg.Executor
-		downFx := exec.GetDown()
 		idx := exec.GetIndex()
 		name := exec.GetName()
+		downFx := exec.GetDown()
 
 		// Get a new Tx from migrator
 		tx, err := m.GetTx()
 		if err != nil {
-			return errors.Wrap(err, "migrate error")
+			return errors.Wrap(err, "rollback error")
 		}
 
-		//Continue if already applied
+		// Continue if already applied
 		if !m.canApplyRollback(idx, name, tx) {
-			m.Log().Infof("Migration '%s' already applied.", name)
+			m.Log().Infof("Rollback '%s' cannot be executed.", name)
 			tx.Commit() // No need to handle eventual error here
-			continue
-		}
-
-		// Continue if already not rolledback
-		if m.cancelRollback(idx, name) {
-			log.Printf("Rollback '%s' already executed.", name)
 			continue
 		}
 
@@ -379,11 +374,10 @@ func (m *Migrator) rollback(steps int) error {
 			if err2 != nil {
 				return errors.Wrap(err2, "rollback rollback error")
 			}
-
 			return errors.Wrapf(err, "cannot run rollback '%s'", name)
 		}
 
-		// Register migration
+		// Remove migration record
 		exec.SetTx(tx)
 		err = m.delMigration(exec)
 
@@ -398,7 +392,11 @@ func (m *Migrator) rollback(steps int) error {
 			return errors.NewError(msg)
 		}
 
-		m.Log().Infof("Rollback executed: %s", name)
+		processed++
+		if processed == steps {
+			m.Log().Infof("Rollback executed: %s", name)
+			return nil
+		}
 	}
 
 	return nil
@@ -442,20 +440,15 @@ func (m *Migrator) Reset() error {
 
 func (m *Migrator) recMigration(e Exec) error {
 	st := fmt.Sprintf(insertMigTable, migTable)
-	fmt.Println(st)
+
 	uid, err := uuid.New()
 	if err != nil {
 		return errors.Wrap(err, "rec migration error")
 	}
 
-	fmt.Println("Statement: ", st)
-	fmt.Println("Index:", e.GetIndex())
-	fmt.Println("Index (NullInt):", ToNullInt64(e.GetIndex()))
-
 	_, err = e.GetTx().Exec(st,
 		ToNullString(uid.Val),
 		ToNullInt64(e.GetIndex()),
-		//ToNullString(fmt.Sprintf("%d", e.GetIndex())),
 		ToNullString(e.GetName()),
 		ToNullString(time.Now().Format(time.RFC3339)),
 	)
@@ -467,9 +460,9 @@ func (m *Migrator) recMigration(e Exec) error {
 	return nil
 }
 
-func (m *Migrator) cancelRollback(index int64, name string) bool {
+func (m *Migrator) cancelRollback(index int64, name string, tx *sql.Tx) bool {
 	st := fmt.Sprintf(selFromMigTable, migTable, index, name)
-	r, err := m.DB().Query(st)
+	r, err := tx.Query(st)
 
 	if err != nil {
 		m.Log().Errorf("Cannot determine rollback status: %w", err)
@@ -493,6 +486,7 @@ func (m *Migrator) cancelRollback(index int64, name string) bool {
 func (m *Migrator) canApplyMigration(index int64, name string, tx *sql.Tx) bool {
 	st := fmt.Sprintf(selFromMigTable, migTable, index, name)
 	r, err := tx.Query(st)
+	defer r.Close()
 
 	if err != nil {
 		m.Log().Errorf("Cannot determine migration status: %w", err)
