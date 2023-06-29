@@ -4,16 +4,21 @@ import "database/sql"
 
 type (
 	step struct {
-		Name string
-		Up   MigFx
-		Down MigFx
-		tx   *sql.Tx
+		Index int64
+		Name  string
+		Up    MigFx
+		Down  MigFx
+		tx    *sql.Tx
 	}
 )
 
 func (s *step) Config(up MigFx, down MigFx) {
 	s.Up = up
 	s.Down = down
+}
+
+func (s *step) GetIndex() (idx int64) {
+	return s.Index
 }
 
 func (s *step) GetName() (name string) {
