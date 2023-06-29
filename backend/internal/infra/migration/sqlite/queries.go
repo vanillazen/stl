@@ -1,25 +1,23 @@
 package sqlite
 
 const (
-	migrationsTable = "migration"
+	createDB = `CREATE DATABASE %s;`
 
-	createDBSt = `
-		CREATE DATABASE %s;`
+	dropDB = `DROP DATABASE %s;`
 
-	dropDBSt = `DROP DATABASE %s;`
-
-	createMigraationTableSt = `CREATE TABLE %s (
+	createMigTable = `CREATE TABLE %s (
     id UUID PRIMARY KEY,
-		name VARCHAR(64),
-		created_at TEXT
-	);`
+    idx INTEGER,
+    name VARCHAR(64),
+    created_at TEXT
+    );`
 
-	sqlDropMigrationsSt = `DROP TABLE %s;`
+	dropMigTable = `DROP TABLE %s;`
 
-	selMigrationSt = `SELECT (COUNT(*) > 0) AS record_exists FROM %s WHERE name = '%s'`
+	selFromMigTable = `SELECT (COUNT(*) > 0) AS record_exists FROM %s WHERE idx = %d AND name = '%s'`
 
-	recMigrationSt = `INSERT INTO %s (id, name, created_at)
-	VALUES (:id, :name, :created_at);`
+	insertMigTable = `INSERT INTO %s (id, idx, name, created_at)
+	VALUES (:id, :idx, :name, :created_at);`
 
-	delMigrationSt = `DELETE FROM %s WHERE name = '%s'`
+	delFromMigTable = `DELETE FROM %s WHERE idx = %d AND name = '%s'`
 )
