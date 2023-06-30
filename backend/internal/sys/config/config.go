@@ -40,6 +40,10 @@ func (cfg *Config) SetValues(values map[string]string) {
 	cfg.values = values
 }
 
+func (cfg *Config) GetValues() map[string]string {
+	return cfg.values
+}
+
 func (cfg *Config) SetDefaults(values map[string]string) {
 	cfg.defaults = values
 }
