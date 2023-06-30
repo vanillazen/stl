@@ -11,6 +11,7 @@ import (
 	"github.com/vanillazen/stl/backend/internal/infra/db"
 	"github.com/vanillazen/stl/backend/internal/infra/db/sqlite"
 	http2 "github.com/vanillazen/stl/backend/internal/infra/http"
+	migrator "github.com/vanillazen/stl/backend/internal/infra/migration"
 	mig "github.com/vanillazen/stl/backend/internal/infra/migration/sqlite"
 	sqliterepo "github.com/vanillazen/stl/backend/internal/infra/repo/sqlite"
 
@@ -29,7 +30,7 @@ type App struct {
 	http       *http2.Server
 	db         db.DB
 	repo       port.ListRepo
-	migrator   *mig.Migrator // TODO: This will be a generic migrator interface.
+	migrator   migrator.Migrator // TODO: This will be a generic migrator interface.
 	svc        service.ListService
 }
 
