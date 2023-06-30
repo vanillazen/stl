@@ -1,18 +1,36 @@
 package sqlite
 
 import (
+	"context"
 	"embed"
+	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
-	"github.com/vanillazen/stl/backend/internal/infra/db"
 	"github.com/vanillazen/stl/backend/internal/infra/db/sqlite"
 	migrator "github.com/vanillazen/stl/backend/internal/infra/migration"
 	"github.com/vanillazen/stl/backend/internal/sys"
 	"github.com/vanillazen/stl/backend/internal/sys/config"
 	l "github.com/vanillazen/stl/backend/internal/sys/log"
 	"github.com/vanillazen/stl/backend/internal/sys/test"
+
+	_ "github.com/mattn/go-sqlite3" // Import the SQLite driver
+)
+
+const (
+	tmpDir     = "tmp"
+	dbFileName = "stl-test.db"
+	migDir     = "migrations"
+)
+
+var (
+	logger l.Logger
+	cfg    *config.Config
+	opts   []sys.Option
+	key    = config.Key
+	testDB *sqlite.DB
 )
 
 type (
@@ -21,8 +39,9 @@ type (
 		cfg      *config.Config
 		log      l.Logger
 		opts     []sys.Option
+		tmpPath  string
 		fs       embed.FS
-		db       db.DB
+		db       *sqlite.DB
 		migrator migrator.Migrator
 		testFunc func(t *testing.T)
 		expected test.Result
@@ -33,13 +52,6 @@ type (
 		value interface{}
 		err   error
 	}
-)
-
-var (
-	logger l.Logger
-	cfg    *config.Config
-	opts   []sys.Option
-	FS     embed.FS
 )
 
 func TestMain(m *testing.M) {
@@ -58,15 +70,16 @@ func TestMigrate(t *testing.T) {
 		expected: Result{},
 	}
 	tc0.testFunc = tc0.TestMigrateHappyPath
+	tcs.Add(tc0)
 
-	tc1 := &TestCase{
-		name:     "TestMigrateCond0",
-		expected: Result{},
-	}
-	tc1.testFunc = tc1.TestMigrateCond0
+	//tc1 := &TestCase{
+	//	name:     "TestMigrateCond0",
+	//	expected: Result{},
+	//}
+	//tc1.testFunc = tc1.TestMigrateCond0
+	//tcs.Add(tc1)
 
 	// add more test cases...
-	tcs.Add(tc0, tc1)
 
 	tests := tcs.All()
 
@@ -75,7 +88,7 @@ func TestMigrate(t *testing.T) {
 
 		err := tc.Setup()
 		if err != nil {
-			t.Errorf("%s setup error: %s", tc.Name(), err)
+			t.Fatalf("%s setup error: %s", tc.Name(), err)
 		}
 
 		t.Run(tc.Name(), func(t *testing.T) {
@@ -116,6 +129,7 @@ func (tc *TestCase) TestMigrateHappyPath(t *testing.T) {
 	}
 
 	// TODO: add assertions
+
 	// ...
 
 	tc.result = Result{
@@ -197,18 +211,97 @@ func (tc *TestCase) TestFunc(t *testing.T) func(t *testing.T) {
 }
 
 func (tc *TestCase) Setup() error {
+	ctx := context.Background()
+
 	tc.cfg = cfg
 	tc.log = logger
 	tc.opts = opts
-	tc.fs = FS
+	tc.fs = embed.FS{}
 	tc.db = sqlite.NewDB(tc.opts...)
+
+	// Create the temporary directory
+	tmpPath := filepath.Join(".", tmpDir)
+	err := os.MkdirAll(tmpPath, 0755)
+	if err != nil {
+		msg := fmt.Errorf("failed to create tmp dir: %v", err)
+		panic(msg)
+	}
+
+	// Create the migrations directory
+	migrationsPath := filepath.Join(tmpPath, migDir)
+	err = os.Mkdir(migrationsPath, 0755)
+	if err != nil {
+		err := fmt.Errorf("failed to create temp migrations dir: %v", err)
+		return err
+	}
+
+	// Set config values to test temp directories
+	opts := cfg.GetValues()
+	opts[key.SQLiteFilePath] = filepath.Join(tmpPath, dbFileName)
+	cfg.SetValues(opts)
+
+	// Create DB
+	// DB will be used for assertions for this reason we maintain a global reference.
+	// In SQLite we don't want to have multiple open connections.
+	testDB = sqlite.NewDB(tc.opts...)
+	err = testDB.Start(ctx)
+	if err != nil {
+		err := fmt.Errorf("failed to create test db: %v", err)
+		return err
+	}
+
+	tc.db = testDB
 
 	return nil
 }
 
 func (tc *TestCase) Teardown() error {
-	// TODO: Cleanup resources
+	ctx := context.Background()
+	err := tc.db.Stop(ctx)
+	if err != nil {
+		err = fmt.Errorf("failed to remove tmp dir: %v", err)
+		logger.Error(err)
+	}
+
+	tmpPath := filepath.Join(".", tmpDir)
+
+	err = os.RemoveAll(tmpPath)
+	if err != nil {
+		err := fmt.Errorf("failed to remove tmp dir: %v", err)
+		logger.Error(err)
+	}
+
 	return nil
+}
+
+func setup() {
+	cfg = &config.Config{}
+	cfg.SetValues(optValues())
+
+	// Test logger
+	logger = l.NewTestLogger("error")
+
+	// opts
+	opts = []sys.Option{
+		sys.WithConfig(cfg),
+		sys.WithLogger(logger),
+	}
+}
+
+// teardown removes the temporary directory and files created for the tests
+func teardown() {
+}
+
+func optValues() map[string]string {
+	return map[string]string{
+		key.SQLiteUser:   "stl",
+		key.SQLitePass:   "stl",
+		key.SQLiteDB:     "stl-test",
+		key.SQLiteHost:   "localhost",
+		key.SQLitePort:   "",
+		key.SQLiteSchema: "",
+		key.SQLiteSSL:    "false",
+	}
 }
 
 func (r Result) Value() interface{} {
@@ -217,25 +310,4 @@ func (r Result) Value() interface{} {
 
 func (r Result) Error() error {
 	return r.err
-}
-
-func setup() {
-	cfg = &config.Config{}
-	cfg.SetValues(map[string]string{}) // TODO: Set required config values
-
-	// Test logger
-	logger = l.NewTestLogger("debug")
-
-	// opts
-	opts = []sys.Option{
-		sys.WithConfig(cfg),
-		sys.WithLogger(logger),
-	}
-
-	// Embed filesystem
-	FS = embed.FS{} // TODO: mock fs
-}
-
-func teardown() {
-	// TODO: General test suite teardown
 }
