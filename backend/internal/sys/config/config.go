@@ -197,7 +197,7 @@ var (
 
 // GetString returns the value associated with the key as a string.
 func (cfg *Config) GetString(key string) string {
-	vals := cfg.get(true)
+	vals := cfg.get(false)
 	val, ok := vals[key]
 	if !ok {
 		val = cfg.defaults[key]
