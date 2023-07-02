@@ -20,15 +20,18 @@ import (
 )
 
 const (
-	tmpDir     = "../../../../tmp"
+	tmpDir     = "tmp"
 	dbFileName = "stl-test.db"
-	migDir     = "migrations"
 )
 
 var (
-	logger   l.Logger
-	cfg      *config.Config
-	opts     []sys.Option
+	logger l.Logger
+	cfg    *config.Config
+	opts   []sys.Option
+
+	//go:embed all:tmp/migrations/*.sql
+	fs embed.FS
+
 	key      = config.Key
 	testDB   *sqlite.DB
 	testsDir = []string{}
@@ -84,9 +87,10 @@ func NewTestCase(name string,
 
 func TestMain(m *testing.M) {
 	setup()
-	defer teardown()
 
 	ev := m.Run()
+
+	teardown()
 
 	os.Exit(ev)
 }
@@ -117,9 +121,7 @@ func TestMigrate(t *testing.T) {
 			t.Fatalf("%s setup error: %s", tc.Name(), err)
 		}
 
-		t.Run(tc.Name(), func(t *testing.T) {
-			tc.TestFunc(t)
-		})
+		t.Run(tc.Name(), tc.TestFunc())
 
 		resErr := tc.Expected().Error()
 		expErr := tc.Result().Error()
@@ -194,9 +196,7 @@ func TestRollback(t *testing.T) {
 		if err != nil {
 		}
 
-		t.Run(tc.Name(), func(t *testing.T) {
-			tc.TestFunc(t)
-		})
+		t.Run(tc.Name(), tc.TestFunc())
 
 		resErr := tc.Expected().Error()
 		expErr := tc.result.Error()
@@ -232,7 +232,7 @@ func (tc *TestCase) Result() test.Result {
 	return tc.result
 }
 
-func (tc *TestCase) TestFunc(t *testing.T) func(t *testing.T) {
+func (tc *TestCase) TestFunc() func(t *testing.T) {
 	return tc.testFunc
 }
 
@@ -252,15 +252,7 @@ func (tc *TestCase) Setup() error {
 		panic(msg)
 	}
 
-	// Create the migrations directory
-	migrationsPath := filepath.Join(testDir, migDir)
-	err = os.Mkdir(migrationsPath, os.ModeDir) // 0755
-	if err != nil {
-		err := fmt.Errorf("failed to create temp migrations dir: %v", err)
-		return err
-	}
-
-	testsDir = append(testsDir, tmpDir)
+	testsDir = append(testsDir, testDir)
 
 	// Set config values to test temp directories
 	cfgValues := cfg.GetValues()
@@ -315,7 +307,7 @@ func setup() {
 // teardown removes the temporary directory and files created for the tests
 func teardown() {
 	for _, td := range testsDir {
-		err := os.Remove(td)
+		err := os.RemoveAll(td)
 		if err != nil {
 			logger.Error(err)
 		}

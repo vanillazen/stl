@@ -9,7 +9,7 @@ type (
 		Teardown() error
 		Expected() Result
 		Result() Result
-		TestFunc(t *testing.T) func(t *testing.T)
+		TestFunc() func(t *testing.T)
 	}
 
 	Result interface {
