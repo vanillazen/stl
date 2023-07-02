@@ -16,21 +16,22 @@ import (
 	l "github.com/vanillazen/stl/backend/internal/sys/log"
 	"github.com/vanillazen/stl/backend/internal/sys/test"
 
-	_ "github.com/mattn/go-sqlite3" // Import the SQLite driver
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
-	tmpDir     = "tmp"
+	tmpDir     = "../../../../tmp"
 	dbFileName = "stl-test.db"
 	migDir     = "migrations"
 )
 
 var (
-	logger l.Logger
-	cfg    *config.Config
-	opts   []sys.Option
-	key    = config.Key
-	testDB *sqlite.DB
+	logger   l.Logger
+	cfg      *config.Config
+	opts     []sys.Option
+	key      = config.Key
+	testDB   *sqlite.DB
+	testsDir = []string{}
 )
 
 type (
@@ -54,10 +55,38 @@ type (
 	}
 )
 
+func NewTestCase(name string,
+	cfg *config.Config,
+	logger l.Logger,
+	opts []sys.Option,
+	tnpPath string) *TestCase {
+
+	return &TestCase{
+		name:     name,
+		cfg:      cfg,
+		log:      logger,
+		opts:     opts,
+		tmpPath:  tnpPath,
+		fs:       embed.FS{},
+		db:       nil,
+		migrator: nil,
+		testFunc: nil,
+		expected: Result{
+			value: nil,
+			err:   nil,
+		},
+		result: Result{
+			value: nil,
+			err:   nil,
+		},
+	}
+}
+
 func TestMain(m *testing.M) {
 	setup()
+	defer teardown()
+
 	ev := m.Run()
-	teardown()
 
 	os.Exit(ev)
 }
@@ -65,10 +94,7 @@ func TestMain(m *testing.M) {
 func TestMigrate(t *testing.T) {
 	var tcs test.Cases
 
-	tc0 := &TestCase{
-		name:     "TestMigrateHappyPath",
-		expected: Result{},
-	}
+	tc0 := NewTestCase("TestMigrateHappyPath", cfg, logger, opts, tmpDir)
 	tc0.testFunc = tc0.TestMigrateHappyPath
 	tcs.Add(tc0)
 
@@ -104,8 +130,8 @@ func TestMigrate(t *testing.T) {
 		if resErr != expErr {
 			t.Errorf("expected error '%s' but got: '%s'", expErr, resErr)
 
-		} else if reflect.DeepEqual(resVal, expVal) {
-			t.Errorf("expected value '%s' but got: '%s'", expVal, resVal)
+		} else if !reflect.DeepEqual(resVal, expVal) {
+			t.Errorf("expected value '%v' but got: '%v'", expVal, resVal)
 		} else {
 			t.Logf("%s: OK", tc.Name())
 		}
@@ -220,25 +246,31 @@ func (tc *TestCase) Setup() error {
 	tc.db = sqlite.NewDB(tc.opts...)
 
 	// Create the temporary directory
-	tmpPath := filepath.Join(".", tmpDir)
-	err := os.MkdirAll(tmpPath, 0755)
+	testDir, err := os.MkdirTemp(tmpDir, "test")
 	if err != nil {
 		msg := fmt.Errorf("failed to create tmp dir: %v", err)
 		panic(msg)
 	}
 
 	// Create the migrations directory
-	migrationsPath := filepath.Join(tmpPath, migDir)
-	err = os.Mkdir(migrationsPath, 0755)
+	migrationsPath := filepath.Join(testDir, migDir)
+	err = os.Mkdir(migrationsPath, os.ModeDir) // 0755
 	if err != nil {
 		err := fmt.Errorf("failed to create temp migrations dir: %v", err)
 		return err
 	}
 
+	testsDir = append(testsDir, tmpDir)
+
 	// Set config values to test temp directories
-	opts := cfg.GetValues()
-	opts[key.SQLiteFilePath] = filepath.Join(tmpPath, dbFileName)
-	cfg.SetValues(opts)
+	cfgValues := cfg.GetValues()
+	cfgValues[key.SQLiteFilePath] = filepath.Join(testDir, dbFileName)
+	cfg.SetValues(cfgValues)
+
+	tc.opts = []sys.Option{
+		sys.WithConfig(cfg),
+		sys.WithLogger(logger),
+	}
 
 	// Create DB
 	// DB will be used for assertions for this reason we maintain a global reference.
@@ -263,14 +295,6 @@ func (tc *TestCase) Teardown() error {
 		logger.Error(err)
 	}
 
-	tmpPath := filepath.Join(".", tmpDir)
-
-	err = os.RemoveAll(tmpPath)
-	if err != nil {
-		err := fmt.Errorf("failed to remove tmp dir: %v", err)
-		logger.Error(err)
-	}
-
 	return nil
 }
 
@@ -290,6 +314,12 @@ func setup() {
 
 // teardown removes the temporary directory and files created for the tests
 func teardown() {
+	for _, td := range testsDir {
+		err := os.Remove(td)
+		if err != nil {
+			logger.Error(err)
+		}
+	}
 }
 
 func optValues() map[string]string {
