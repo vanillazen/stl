@@ -31,10 +31,14 @@ var (
 	cfg    *config.Config
 	opts   []sys.Option
 
-	assetsPath = filepath.Join(tmpDir, "migrations")
+	assetsPath  = filepath.Join(tmpDir, "migrations")
+	assetsPath1 = filepath.Join(tmpDir, "migrations-1")
 
 	//go:embed all:tmp/migrations/*.sql
 	fs embed.FS
+
+	//go:embed all:tmp/migrations-1/*.sql
+	fs1 embed.FS
 
 	key      = config.Key
 	testDB   *sqlite.DB
@@ -94,7 +98,7 @@ func TestMain(m *testing.M) {
 
 	ev := m.Run()
 
-	//teardown()
+	teardown()
 
 	os.Exit(ev)
 }
@@ -102,19 +106,19 @@ func TestMain(m *testing.M) {
 func TestMigrate(t *testing.T) {
 	var tcs test.Cases
 
-	tc0 := NewTestCase("TestMigrateHappyPath", cfg, logger, opts, tmpDir)
-	tc0.testFunc = tc0.TestMigrateHappyPath
+	tc0 := NewTestCase("TestMigrateBase", cfg, logger, opts, tmpDir)
+	tc0.testFunc = tc0.TestMigrateBase
 	tc0.expected = Result{
 		err: nil,
 	}
 	tcs.Add(tc0)
 
-	//tc1 := &TestCase{
-	//	name:     "TestMigrateCond0",
-	//	expected: Result{},
-	//}
-	//tc1.testFunc = tc1.TestMigrateCond0
-	//tcs.Add(tc1)
+	tc1 := NewTestCase("TestMigrateAndAgain", cfg, logger, opts, tmpDir)
+	tc1.testFunc = tc0.TestMigrateAndAgain
+	tc1.expected = Result{
+		err: nil,
+	}
+	tcs.Add(tc1)
 
 	// add more test cases...
 
@@ -152,7 +156,7 @@ func TestMigrate(t *testing.T) {
 	}
 }
 
-func (tc *TestCase) TestMigrateHappyPath(t *testing.T) {
+func (tc *TestCase) TestMigrateBase(t *testing.T) {
 	ctx := context.Background()
 	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
 	tc.migrator.SetAssetsPath(assetsPath)
@@ -165,15 +169,6 @@ func (tc *TestCase) TestMigrateHappyPath(t *testing.T) {
 		return
 	}
 
-	err = tc.migrator.Migrate()
-	if err != nil {
-		tc.result = Result{
-			err: err,
-		}
-		return
-	}
-
-	// TODO: add assertions
 	expected := []string{"users", "lists", "tasks"}
 	found, ok := tablesExists(tc.db, expected...)
 	if !ok {
@@ -213,10 +208,16 @@ func (tc *TestCase) TestMigrateHappyPath(t *testing.T) {
 	}
 }
 
-func (tc *TestCase) TestMigrateCond0(t *testing.T) {
-	tc.migrator = NewMigrator(tc.fs, tc.db)
+func (tc *TestCase) TestMigrateAndAgain(t *testing.T) {
+	ctx := context.Background()
+	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
+	tc.migrator.SetAssetsPath(assetsPath)
 
-	err := tc.migrator.Migrate()
+	tc.fs = fs1
+	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
+	tc.migrator.SetAssetsPath(assetsPath1)
+
+	err := tc.migrator.Start(ctx)
 	if err != nil {
 		tc.result = Result{
 			err: err,
@@ -224,12 +225,42 @@ func (tc *TestCase) TestMigrateCond0(t *testing.T) {
 		return
 	}
 
-	// TODO: add assertions
-	// ...
+	expected := []string{"users", "lists", "tasks", "tags"}
+	found, ok := tablesExists(tc.db, expected...)
+	if !ok {
+		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
+	}
+
+	migRecords, err := migRecords(tc.db)
+	if err != nil {
+		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
+	}
+
+	expectedIdxSum := 10
+	idxSum := 0
+	names := []string{}
+	validCreatedAt := true
+
+	for _, mg := range migRecords {
+		names = append(names, mg.Name)
+		idxSum = idxSum + mg.Index
+		validCreatedAt = validCreatedAt && !isAfterNowMinus(1, mg.CreatedAt)
+	}
+
+	if !reflect.DeepEqual(names, expected) {
+		t.Errorf("expected migration record '%v' but got: '%v'", expected, names)
+	}
+
+	if idxSum != expectedIdxSum {
+		t.Errorf("wrong migration record indexes")
+	}
+
+	if !validCreatedAt {
+		t.Errorf("wrong migration record created at timestamp")
+	}
 
 	tc.result = Result{
-		value: true, // TODO: Add proper result value if required
-		err:   nil,
+		err: nil,
 	}
 }
 
@@ -438,20 +469,6 @@ func isAfterNowMinus(xMinutes int, dateStr string) (ok bool) {
 
 	if !date.After(nowMinusXMinutes) {
 		return false
-	}
-
-	return true
-}
-
-func slicesEqual(slice1, slice2 []string) bool {
-	if len(slice1) != len(slice2) {
-		return false
-	}
-
-	for i := range slice1 {
-		if slice1[i] != slice2[i] {
-			return false
-		}
 	}
 
 	return true
