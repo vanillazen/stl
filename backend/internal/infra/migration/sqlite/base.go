@@ -32,9 +32,10 @@ type (
 	// Migrator struct.
 	Migrator struct {
 		sys.Core
-		fs    embed.FS
-		db    db.DB
-		steps []Migration
+		assetsPath string
+		fs         embed.FS
+		db         db.DB
+		steps      []Migration
 	}
 
 	// Exec interface.
@@ -69,12 +70,21 @@ var (
 
 func NewMigrator(fs embed.FS, db db.DB, opts ...sys.Option) (mig *Migrator) {
 	m := &Migrator{
-		Core: sys.NewCore("migrator", opts...),
-		fs:   fs,
-		db:   db,
+		Core:       sys.NewCore("migrator", opts...),
+		assetsPath: migPath,
+		fs:         fs,
+		db:         db,
 	}
 
 	return m
+}
+
+func (m *Migrator) SetAssetsPath(path string) {
+	m.assetsPath = path
+}
+
+func (m *Migrator) AssetsPath() string {
+	return m.assetsPath
 }
 
 func (m *Migrator) DB() *sql.DB {
