@@ -63,6 +63,15 @@ type (
 	}
 )
 
+type (
+	MigrationRecord struct {
+		ID        string
+		Index     int
+		Name      string
+		CreatedAt string
+	}
+)
+
 var (
 	matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 	matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
