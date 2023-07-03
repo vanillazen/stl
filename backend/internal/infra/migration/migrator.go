@@ -17,5 +17,9 @@ type (
 		SoftReset() error
 		// Reset apply all migrations again after dropping the database and recreating it
 		Reset() error
+		// SetAssetsPath sets the path form where the migrations are read
+		SetAssetsPath(path string)
+		// AssetsPath returns the path form where the migrations are read
+		AssetsPath() string
 	}
 )
