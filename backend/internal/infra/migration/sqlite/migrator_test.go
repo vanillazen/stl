@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/vanillazen/stl/backend/internal/infra/db"
 	"github.com/vanillazen/stl/backend/internal/infra/db/sqlite"
 	migrator "github.com/vanillazen/stl/backend/internal/infra/migration"
 	"github.com/vanillazen/stl/backend/internal/sys"
@@ -28,6 +29,8 @@ var (
 	logger l.Logger
 	cfg    *config.Config
 	opts   []sys.Option
+
+	assetsPath = filepath.Join(tmpDir, "migrations")
 
 	//go:embed all:tmp/migrations/*.sql
 	fs embed.FS
@@ -90,7 +93,7 @@ func TestMain(m *testing.M) {
 
 	ev := m.Run()
 
-	teardown()
+	//teardown()
 
 	os.Exit(ev)
 }
@@ -146,9 +149,19 @@ func TestMigrate(t *testing.T) {
 }
 
 func (tc *TestCase) TestMigrateHappyPath(t *testing.T) {
-	tc.migrator = NewMigrator(tc.fs, tc.db)
+	ctx := context.Background()
+	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
+	tc.migrator.SetAssetsPath(assetsPath)
 
-	err := tc.migrator.Migrate()
+	err := tc.migrator.Start(ctx)
+	if err != nil {
+		tc.result = Result{
+			err: err,
+		}
+		return
+	}
+
+	err = tc.migrator.Migrate()
 	if err != nil {
 		tc.result = Result{
 			err: err,
@@ -157,6 +170,11 @@ func (tc *TestCase) TestMigrateHappyPath(t *testing.T) {
 	}
 
 	// TODO: add assertions
+	expected := []string{"users", "lists", "tasks"}
+	found, ok := tablesExists(tc.db, expected...)
+	if !ok {
+		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
+	}
 
 	// ...
 
@@ -242,7 +260,7 @@ func (tc *TestCase) Setup() error {
 	tc.cfg = cfg
 	tc.log = logger
 	tc.opts = opts
-	tc.fs = embed.FS{}
+	tc.fs = fs
 	tc.db = sqlite.NewDB(tc.opts...)
 
 	// Create the temporary directory
@@ -332,4 +350,23 @@ func (r Result) Value() interface{} {
 
 func (r Result) Error() error {
 	return r.err
+}
+
+// Helpers
+
+func tablesExists(dbase db.DB, tableNames ...string) (found []string, ok bool) {
+	for _, t := range tableNames {
+		var name string
+
+		query := fmt.Sprintf("SELECT name FROM sqlite_master WHERE type='table' AND name='%s'", t)
+
+		err := dbase.DB().QueryRow(query).Scan(&name)
+		if err != nil {
+			continue
+		}
+
+		found = append(found, t)
+	}
+
+	return found, len(tableNames) == len(found)
 }

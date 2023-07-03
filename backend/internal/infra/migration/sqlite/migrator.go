@@ -52,7 +52,7 @@ type queries struct {
 func (m *Migrator) readMigQueries() ([]queries, error) {
 	var qq []queries
 
-	files, err := m.fs.ReadDir(migPath)
+	files, err := m.fs.ReadDir(m.assetsPath)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (m *Migrator) readMigQueries() ([]queries, error) {
 			continue
 		}
 
-		filePath := fmt.Sprintf("%s/%s", migPath, file.Name())
+		filePath := fmt.Sprintf("%s/%s", m.assetsPath, file.Name())
 		content, err := m.fs.ReadFile(filePath)
 		if err != nil {
 			return nil, err
