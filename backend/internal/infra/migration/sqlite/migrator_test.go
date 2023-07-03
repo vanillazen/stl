@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/vanillazen/stl/backend/internal/infra/db"
 	"github.com/vanillazen/stl/backend/internal/infra/db/sqlite"
@@ -103,6 +104,9 @@ func TestMigrate(t *testing.T) {
 
 	tc0 := NewTestCase("TestMigrateHappyPath", cfg, logger, opts, tmpDir)
 	tc0.testFunc = tc0.TestMigrateHappyPath
+	tc0.expected = Result{
+		err: nil,
+	}
 	tcs.Add(tc0)
 
 	//tc1 := &TestCase{
@@ -176,11 +180,36 @@ func (tc *TestCase) TestMigrateHappyPath(t *testing.T) {
 		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
 	}
 
-	// ...
+	migRecords, err := migRecords(tc.db)
+	if err != nil {
+		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
+	}
+
+	expectedIdxSum := 6
+	idxSum := 0
+	names := []string{}
+	validCreatedAt := true
+
+	for _, mg := range migRecords {
+		names = append(names, mg.Name)
+		idxSum = idxSum + mg.Index
+		validCreatedAt = validCreatedAt && !isAfterNowMinus(1, mg.CreatedAt)
+	}
+
+	if !reflect.DeepEqual(names, expected) {
+		t.Errorf("expected migration record '%v' but got: '%v'", expected, names)
+	}
+
+	if idxSum != expectedIdxSum {
+		t.Errorf("wrong migration record indexes")
+	}
+
+	if !validCreatedAt {
+		t.Errorf("wrong migration record created at timestamp")
+	}
 
 	tc.result = Result{
-		value: true, // TODO: Add proper result value if required
-		err:   nil,
+		err: nil,
 	}
 }
 
@@ -354,6 +383,32 @@ func (r Result) Error() error {
 
 // Helpers
 
+func migRecords(dbase db.DB) (migRecords []MigrationRecord, err error) {
+	rows, err := dbase.DB().Query("SELECT id, idx, name, created_at FROM migrations")
+	if err != nil {
+		return migRecords, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var record MigrationRecord
+
+		// Scan the columns into the struct fields
+		err := rows.Scan(&record.ID, &record.Index, &record.Name, &record.CreatedAt)
+		if err != nil {
+			return migRecords, err
+		}
+
+		migRecords = append(migRecords, record)
+	}
+
+	if err = rows.Err(); err != nil {
+		return migRecords, err
+	}
+
+	return migRecords, nil
+}
+
 func tablesExists(dbase db.DB, tableNames ...string) (found []string, ok bool) {
 	for _, t := range tableNames {
 		var name string
@@ -369,4 +424,35 @@ func tablesExists(dbase db.DB, tableNames ...string) (found []string, ok bool) {
 	}
 
 	return found, len(tableNames) == len(found)
+}
+
+func isAfterNowMinus(xMinutes int, dateStr string) (ok bool) {
+	dateFmt := "2006-01-02 15:04:05"
+
+	date, err := time.Parse(dateFmt, dateStr)
+	if err != nil {
+		return false
+	}
+
+	nowMinusXMinutes := time.Now().Add(time.Duration(-xMinutes) * time.Minute)
+
+	if !date.After(nowMinusXMinutes) {
+		return false
+	}
+
+	return true
+}
+
+func slicesEqual(slice1, slice2 []string) bool {
+	if len(slice1) != len(slice2) {
+		return false
+	}
+
+	for i := range slice1 {
+		if slice1[i] != slice2[i] {
+			return false
+		}
+	}
+
+	return true
 }
