@@ -12,3 +12,7 @@ build:
 run:
 	go run main.go
 
+# Testing
+.PHONY: test
+test:
+	make -f makefile.test test-selected
