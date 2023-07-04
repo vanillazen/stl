@@ -7,15 +7,23 @@ import (
 	"github.com/vanillazen/stl/backend/internal/sys/errors"
 )
 
-type APIResponse struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message,omitempty"`
-	Count   int         `json:"count,omitempty"`
-	Pages   int         `json:"pages,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-}
+type (
+	APIResponse struct {
+		Success bool        `json:"success"`
+		Message string      `json:"message,omitempty"`
+		Count   int         `json:"count,omitempty"`
+		Pages   int         `json:"pages,omitempty"`
+		Data    interface{} `json:"data,omitempty"`
+		Error   APIError    `json:"error,omitempty"`
+	}
 
-func (h *ListHandler) handleSuccess(w http.ResponseWriter, payload interface{}, count, pages int, msg ...string) {
+	APIError struct {
+		Message     string `json:"message,omitempty"`
+		InternalErr string `json:"internalError,omitempty"`
+	}
+)
+
+func (h *APIHandler) handleSuccess(w http.ResponseWriter, payload interface{}, count, pages int, msg ...string) {
 	var m string
 	if len(msg) > 0 {
 		m = msg[0]
@@ -38,7 +46,7 @@ func (h *ListHandler) handleSuccess(w http.ResponseWriter, payload interface{}, 
 	return
 }
 
-func (h *ListHandler) handleError(w http.ResponseWriter, handlerError error) {
+func (h *APIHandler) handleError(w http.ResponseWriter, handlerError error) {
 	response := APIResponse{
 		Success: false,
 		Message: handlerError.Error(),
