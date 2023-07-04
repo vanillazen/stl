@@ -120,6 +120,27 @@ func TestMigrator(t *testing.T) {
 	}
 	tcs.Add(tc1)
 
+	tc2 := NewTestCase("TestRollback1", cfg, logger, opts, tmpDir)
+	tc2.testFunc = tc2.TestRollback1
+	tc2.expected = Result{
+		err: nil,
+	}
+	tcs.Add(tc2)
+
+	tc3 := NewTestCase("TestRollback2", cfg, logger, opts, tmpDir)
+	tc3.testFunc = tc3.TestRollback2
+	tc3.expected = Result{
+		err: nil,
+	}
+	tcs.Add(tc3)
+
+	tc4 := NewTestCase("TestRollbackAll", cfg, logger, opts, tmpDir)
+	tc4.testFunc = tc4.TestRollbackAll
+	tc4.expected = Result{
+		err: nil,
+	}
+	tcs.Add(tc4)
+
 	// add more test cases...
 
 	tests := tcs.All()
@@ -215,6 +236,7 @@ func (tc *TestCase) TestMigrateAndAgain(t *testing.T) {
 
 	err := tc.migrator.Start(ctx)
 	if err != nil {
+		t.Error("pre-setup failed")
 		tc.result = Result{
 			err: err,
 		}
@@ -277,19 +299,22 @@ func (tc *TestCase) TestRollback1(t *testing.T) {
 	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
 	tc.migrator.SetAssetsPath(assetsPath)
 
-	tc.fs = fs1
-	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
-	tc.migrator.SetAssetsPath(assetsPath1)
-
 	err := tc.migrator.Start(ctx)
 	if err != nil {
+		t.Error("pre-setup failed")
+
 		tc.result = Result{
 			err: err,
 		}
 		return
 	}
 
-	expected := []string{"users", "lists", "tasks", "tags"}
+	err = tc.migrator.Rollback(1)
+	if err != nil {
+		t.Errorf("error executing rollback: '%s'", err.Error())
+	}
+
+	expected := []string{"users", "lists"}
 	found, ok := tablesExists(tc.db, expected...)
 	if !ok {
 		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
@@ -300,7 +325,125 @@ func (tc *TestCase) TestRollback1(t *testing.T) {
 		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
 	}
 
-	expectedIdxSum := 10
+	expectedIdxSum := 3
+	idxSum := 0
+	names := []string{}
+	validCreatedAt := true
+
+	for _, mg := range migRecords {
+		names = append(names, mg.Name)
+		idxSum = idxSum + mg.Index
+		validCreatedAt = validCreatedAt && !isAfterNowMinus(1, mg.CreatedAt)
+	}
+
+	if !reflect.DeepEqual(names, expected) {
+		t.Errorf("expected migration record '%v' but got: '%v'", expected, names)
+	}
+
+	if idxSum != expectedIdxSum {
+		t.Errorf("wrong migration record indexes")
+	}
+
+	if !validCreatedAt {
+		t.Errorf("wrong migration record created at timestamp")
+	}
+
+	tc.result = Result{
+		err: nil,
+	}
+}
+
+func (tc *TestCase) TestRollback2(t *testing.T) {
+	ctx := context.Background()
+	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
+	tc.migrator.SetAssetsPath(assetsPath)
+
+	err := tc.migrator.Start(ctx)
+	if err != nil {
+		t.Error("pre-setup failed")
+
+		tc.result = Result{
+			err: err,
+		}
+		return
+	}
+
+	err = tc.migrator.Rollback(2)
+	if err != nil {
+		t.Errorf("error executing rollback: '%s'", err.Error())
+	}
+
+	expected := []string{"users"}
+	found, ok := tablesExists(tc.db, expected...)
+	if !ok {
+		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
+	}
+
+	migRecords, err := migRecords(tc.db)
+	if err != nil {
+		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
+	}
+
+	expectedIdxSum := 1
+	idxSum := 0
+	names := []string{}
+	validCreatedAt := true
+
+	for _, mg := range migRecords {
+		names = append(names, mg.Name)
+		idxSum = idxSum + mg.Index
+		validCreatedAt = validCreatedAt && !isAfterNowMinus(1, mg.CreatedAt)
+	}
+
+	if !reflect.DeepEqual(names, expected) {
+		t.Errorf("expected migration record '%v' but got: '%v'", expected, names)
+	}
+
+	if idxSum != expectedIdxSum {
+		t.Errorf("wrong migration record indexes")
+	}
+
+	if !validCreatedAt {
+		t.Errorf("wrong migration record created at timestamp")
+	}
+
+	tc.result = Result{
+		err: nil,
+	}
+}
+
+func (tc *TestCase) TestRollbackAll(t *testing.T) {
+	ctx := context.Background()
+	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
+	tc.migrator.SetAssetsPath(assetsPath)
+
+	err := tc.migrator.Start(ctx)
+	if err != nil {
+		t.Error("pre-setup failed")
+
+		tc.result = Result{
+			err: err,
+		}
+		return
+	}
+
+	err = tc.migrator.RollbackAll()
+	if err != nil {
+		t.Errorf("error executing rollback: '%s'", err.Error())
+	}
+
+	expected := []string{}
+	found, ok := tablesExists(tc.db, expected...)
+	if !ok {
+		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
+	}
+
+	migRecords, err := migRecords(tc.db)
+	if err != nil {
+		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
+	}
+
+	expectedIdxSum := 0
 	idxSum := 0
 	names := []string{}
 	validCreatedAt := true

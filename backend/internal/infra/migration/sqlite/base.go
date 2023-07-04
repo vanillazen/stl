@@ -363,7 +363,6 @@ func (m *Migrator) RollbackAll() error {
 func (m *Migrator) rollback(steps int) error {
 	processed := 0
 	count := m.count()
-	//stopAt := count - steps
 
 	for i := count - 1; i >= 0; i-- {
 		mg := m.steps[i]
