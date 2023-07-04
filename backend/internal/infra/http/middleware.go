@@ -10,16 +10,6 @@ import (
 	"github.com/vanillazen/stl/backend/internal/sys/log"
 )
 
-type (
-	ContextKey string
-)
-
-const (
-	ReqCtxKey  = "req"
-	UserCtxKey = "user"
-	ListCtxKey = "list"
-)
-
 // Request logger
 
 const (

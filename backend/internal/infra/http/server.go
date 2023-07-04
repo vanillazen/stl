@@ -19,8 +19,13 @@ type (
 		opts []sys.Option
 		http.Server
 		*ServeMux
-		svc service.ListService
+		APIV1 *APIHandler
+		svc   service.ListService
 	}
+)
+
+const (
+	apiV1 = "/api/v1/"
 )
 
 var (
@@ -37,12 +42,13 @@ func NewServer(svc service.ListService, opts ...sys.Option) (server *Server) {
 		Core:     sys.NewCore(httpServerName, opts...),
 		opts:     opts,
 		ServeMux: NewServeMux("root-router", opts...),
+		APIV1:    NewAPIHandler(svc, opts...),
 		svc:      svc,
 	}
 }
 
 func (srv *Server) Setup(ctx context.Context) {
-	h := NewListHandler(srv.svc, srv.opts...)
+	h := NewAPIHandler(srv.svc, srv.opts...)
 
 	srv.Log().Debug(h)
 
@@ -52,6 +58,7 @@ func (srv *Server) Setup(ctx context.Context) {
 	// RequestID, RealIP, Logging and Recover
 
 	// TODO: Setup Mux routes & handlers
+	srv.Mux().HandleFunc(apiV1, srv.APIV1.handleV1)
 }
 
 func (srv *Server) Start(ctx context.Context) error {
