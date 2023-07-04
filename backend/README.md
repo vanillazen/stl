@@ -27,6 +27,9 @@ go run ./cmd/stl/main.go
 [INF] 2023/06/28 11:32:19 http-server listening at localhost:8080
 ```
 
+## API 
+* OpenAPI: [http://localhost:8080/api/v1/docs](http://localhost:8080/api/v1/docs)
+
 ## Other Modules
 
 In addition to the backend module, the STL project consists of the following sibling modules:
