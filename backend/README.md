@@ -47,6 +47,37 @@ By minimizing external dependencies and maximizing the utilization of Go's stand
 
 While abstractions are encouraged, the project prioritizes simplicity over complex architectures. The use of interfaces instead of directly using structs is welcomed as it allows for easy implementation changes and facilitates mocking during testing.
 
+## Tests
+```shell
+╰─ make test
+...
+go test -v -run TestMigrator -count=1 -timeout=10s internal/infra/migration/sqlite/*.go
+=== RUN   TestMigrator
+=== RUN   TestMigrator/TestMigrateBase
+=== NAME  TestMigrator
+    migrator_test.go:170: TestMigrateBase: OK
+=== RUN   TestMigrator/TestMigrateAndAgain
+=== NAME  TestMigrator
+    migrator_test.go:170: TestMigrateAndAgain: OK
+=== RUN   TestMigrator/TestRollback1
+=== NAME  TestMigrator
+    migrator_test.go:170: TestRollback1: OK
+=== RUN   TestMigrator/TestRollback2
+=== NAME  TestMigrator
+    migrator_test.go:170: TestRollback2: OK
+=== RUN   TestMigrator/TestRollbackAll
+=== NAME  TestMigrator
+    migrator_test.go:170: TestRollbackAll: OK
+--- PASS: TestMigrator (0.51s)
+    --- PASS: TestMigrator/TestMigrateBase (0.06s)
+    --- PASS: TestMigrator/TestMigrateAndAgain (0.01s)
+    --- PASS: TestMigrator/TestRollback1 (0.24s)
+    --- PASS: TestMigrator/TestRollback2 (0.09s)
+    --- PASS: TestMigrator/TestRollbackAll (0.09s)
+PASS
+ok      command-line-arguments  0.509s
+```
+
 ## Notes
 This project is intended to serve as a playground for experimentation and learning. It aims to develop a generator that simplifies the generation of similar projects based on the structure and patterns considered convenient within this implementation.
 
