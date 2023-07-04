@@ -19,46 +19,44 @@ type (
 		opts []sys.Option
 		http.Server
 		*ServeMux
-		APIV1 *APIHandler
+		apiV1 *APIHandler
 		svc   service.ListService
 	}
 )
 
 const (
-	apiV1 = "/api/v1/"
-)
-
-var (
+	apiV1          = "/api/v1/"
+	apiV1Docs      = apiV1 + "docs/"
 	httpServerName = "http-server"
-	apiV1PAth      = "/api/v1"
 )
 
 var (
 	cfgKey = config.Key
 )
 
-func NewServer(svc service.ListService, opts ...sys.Option) (server *Server) {
+func NewServer(svc service.ListService, apiDoc string, opts ...sys.Option) (server *Server) {
+	apiHandler := NewAPIHandler(svc, apiDoc, opts...)
+
 	return &Server{
-		Core:     sys.NewCore(httpServerName, opts...),
+		Core:     sys.NewCore("api-server", opts...),
 		opts:     opts,
-		ServeMux: NewServeMux("root-router", opts...),
-		APIV1:    NewAPIHandler(svc, opts...),
+		ServeMux: NewServeMux("api-router", opts...),
+		apiV1:    apiHandler,
 		svc:      svc,
 	}
 }
 
-func (srv *Server) Setup(ctx context.Context) {
-	h := NewAPIHandler(srv.svc, srv.opts...)
-
-	srv.Log().Debug(h)
-
+func (srv *Server) Setup(ctx context.Context) error {
 	//reqLog := NewReqLoggerMiddleware(srv.Log())
 
 	// TODO: Add middlewares for srv.router:
 	// RequestID, RealIP, Logging and Recover
 
 	// TODO: Setup Mux routes & handlers
-	srv.Mux().HandleFunc(apiV1, srv.APIV1.handleV1)
+	srv.Mux().HandleFunc(apiV1Docs, srv.apiV1.handleOpenAPIDocs)
+	srv.Mux().HandleFunc(apiV1, srv.apiV1.handleV1)
+
+	return nil
 }
 
 func (srv *Server) Start(ctx context.Context) error {

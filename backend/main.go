@@ -18,11 +18,16 @@ var (
 	log l.Logger = l.NewLogger(logLevel)
 )
 
-//go:embed all:assets/migrations/sqlite/*.sql
-var fs embed.FS
+var (
+	//go:embed all:assets/migrations/sqlite/*.sql
+	migFs embed.FS
+
+	//go:embed api/openapi/openapi.html
+	openapiDoc string
+)
 
 func main() {
-	app := a.NewApp(name, env, fs, log)
+	app := a.NewApp(name, env, openapiDoc, migFs, log)
 
 	err := app.Run()
 	if err != nil {

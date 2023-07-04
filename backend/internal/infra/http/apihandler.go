@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -20,14 +21,16 @@ type (
 
 	APIHandler struct {
 		*sys.SimpleCore
-		svc service.ListService
+		svc    service.ListService
+		apiDoc string
 	}
 )
 
-func NewAPIHandler(svc service.ListService, opts ...sys.Option) *APIHandler {
+func NewAPIHandler(svc service.ListService, apiDoc string, opts ...sys.Option) *APIHandler {
 	return &APIHandler{
 		SimpleCore: sys.NewCore("list-handler", opts...),
 		svc:        svc,
+		apiDoc:     apiDoc,
 	}
 }
 
@@ -118,6 +121,11 @@ func (h *APIHandler) GetList(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.Log().Error(err)
 	}
+}
+
+func (h *APIHandler) handleOpenAPIDocs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	_, _ = fmt.Fprint(w, h.apiDoc)
 }
 
 // Helpers

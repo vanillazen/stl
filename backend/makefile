@@ -6,6 +6,7 @@ direnv:
 
 .PHONY: build
 build:
+	make openapi/gen
 	go build ./...
 
 .PHONY: run

@@ -32,9 +32,10 @@ type App struct {
 	repo       port.ListRepo
 	migrator   migrator.Migrator // TODO: This will be a generic migrator interface.
 	svc        service.ListService
+	apiDoc     string
 }
 
-func NewApp(name, namespace string, fs embed.FS, log log.Logger) (app *App) {
+func NewApp(name, namespace string, apiDoc string, fs embed.FS, log log.Logger) (app *App) {
 	cfg := config.Load(namespace)
 
 	opts := []sys.Option{
@@ -43,9 +44,10 @@ func NewApp(name, namespace string, fs embed.FS, log log.Logger) (app *App) {
 	}
 
 	app = &App{
-		Core: sys.NewCore(name, opts...),
-		opts: opts,
-		fs:   fs,
+		Core:   sys.NewCore(name, opts...),
+		opts:   opts,
+		fs:     fs,
+		apiDoc: apiDoc,
 	}
 
 	return app
@@ -78,9 +80,15 @@ func (app *App) Setup(ctx context.Context) error {
 	app.svc = service.NewService(app.repo, app.opts...)
 
 	// HTTP Server
-	app.http = http2.NewServer(app.svc, app.opts...)
+	app.http = http2.NewServer(app.svc, app.apiDoc, app.opts...)
 
-	err := app.db.Start(ctx)
+	err := app.http.Setup(ctx)
+	if err != nil {
+		err = errors.Wrapf(err, "%s setup error", app.Name())
+		return err
+	}
+
+	err = app.db.Start(ctx)
 	if err != nil {
 		err = errors.Wrapf(err, "%s setup error", app.Name())
 		return err
