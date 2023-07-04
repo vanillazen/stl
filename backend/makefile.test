@@ -1,0 +1,12 @@
+# Tests
+
+.PHONY: test-selected
+test-selected:
+	clear
+	make -f makefile.test test-migrator
+
+## Migrator
+.PHONY: test-migrator
+test-migrator:
+	go test -v -run TestMigrator -count=1 -timeout=10s internal/infra/migration/sqlite/*.go
+
