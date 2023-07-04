@@ -1,0 +1,58 @@
+definitions:
+  http.APIError:
+    properties:
+      internalError:
+        type: string
+      message:
+        type: string
+    type: object
+  http.APIResponse:
+    properties:
+      count:
+        type: integer
+      data: {}
+      error:
+        $ref: '#/definitions/http.APIError'
+      message:
+        type: string
+      pages:
+        type: integer
+      success:
+        type: boolean
+    type: object
+info:
+  contact: {}
+paths:
+  /api/v1/lists/{id}:
+    get:
+      description: Gets a list by its ID
+      operationId: get-list
+      parameters:
+      - description: List ID formatted as an UUID string
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.APIResponse'
+        "405":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/http.APIResponse'
+      summary: Get list by ID
+      tags:
+      - Lists
+swagger: "2.0"
