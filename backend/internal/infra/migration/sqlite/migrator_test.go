@@ -103,7 +103,7 @@ func TestMain(m *testing.M) {
 	os.Exit(ev)
 }
 
-func TestMigrate(t *testing.T) {
+func TestMigrator(t *testing.T) {
 	var tcs test.Cases
 
 	tc0 := NewTestCase("TestMigrateBase", cfg, logger, opts, tmpDir)
@@ -213,6 +213,70 @@ func (tc *TestCase) TestMigrateAndAgain(t *testing.T) {
 	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
 	tc.migrator.SetAssetsPath(assetsPath)
 
+	err := tc.migrator.Start(ctx)
+	if err != nil {
+		tc.result = Result{
+			err: err,
+		}
+		return
+	}
+
+	tc.fs = fs1
+	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
+	tc.migrator.SetAssetsPath(assetsPath1)
+
+	err = tc.migrator.Start(ctx)
+	if err != nil {
+		tc.result = Result{
+			err: err,
+		}
+		return
+	}
+
+	expected := []string{"users", "lists", "tasks", "tags"}
+	found, ok := tablesExists(tc.db, expected...)
+	if !ok {
+		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
+	}
+
+	migRecords, err := migRecords(tc.db)
+	if err != nil {
+		t.Errorf("expected tables '%v' but got: '%v'", expected, found)
+	}
+
+	expectedIdxSum := 10
+	idxSum := 0
+	names := []string{}
+	validCreatedAt := true
+
+	for _, mg := range migRecords {
+		names = append(names, mg.Name)
+		idxSum = idxSum + mg.Index
+		validCreatedAt = validCreatedAt && !isAfterNowMinus(1, mg.CreatedAt)
+	}
+
+	if !reflect.DeepEqual(names, expected) {
+		t.Errorf("expected migration record '%v' but got: '%v'", expected, names)
+	}
+
+	if idxSum != expectedIdxSum {
+		t.Errorf("wrong migration record indexes")
+	}
+
+	if !validCreatedAt {
+		t.Errorf("wrong migration record created at timestamp")
+	}
+
+	tc.result = Result{
+		err: nil,
+	}
+}
+
+func (tc *TestCase) TestRollback1(t *testing.T) {
+	ctx := context.Background()
+	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
+	tc.migrator.SetAssetsPath(assetsPath)
+
 	tc.fs = fs1
 	tc.migrator = NewMigrator(tc.fs, tc.db, tc.opts...)
 	tc.migrator.SetAssetsPath(assetsPath1)
@@ -261,40 +325,6 @@ func (tc *TestCase) TestMigrateAndAgain(t *testing.T) {
 
 	tc.result = Result{
 		err: nil,
-	}
-}
-
-func TestRollback(t *testing.T) {
-	var tcs []*TestCase
-
-	for i := range tcs {
-		tc := *tcs[i]
-
-		err := tc.Setup()
-		if err != nil {
-		}
-
-		t.Run(tc.Name(), tc.TestFunc())
-
-		resErr := tc.Expected().Error()
-		expErr := tc.result.Error()
-
-		resVal := tc.Expected().Value()
-		expVal := tc.Result().Value()
-
-		if resErr != expErr {
-			t.Errorf("expected error '%s' but got: '%s'", expErr, resErr)
-
-		} else if reflect.DeepEqual(resVal, expVal) {
-			t.Errorf("expected value '%s' but got: '%s'", expVal, resVal)
-		} else {
-			t.Logf("%s: OK", tc.Name())
-		}
-
-		err = tc.Teardown()
-		if err != nil {
-			t.Errorf("%s teardown error: %s", tc.Name(), err)
-		}
 	}
 }
 
