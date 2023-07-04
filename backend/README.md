@@ -52,7 +52,7 @@ While abstractions are encouraged, the project prioritizes simplicity over compl
 
 ## Tests
 ```shell
-╰─ make test
+$ make test
 ...
 go test -v -run TestMigrator -count=1 -timeout=10s internal/infra/migration/sqlite/*.go
 === RUN   TestMigrator
