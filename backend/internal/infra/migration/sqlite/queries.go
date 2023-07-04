@@ -14,7 +14,10 @@ const (
 
 	dropMigTable = `DROP TABLE %s;`
 
-	selFromMigTable = `SELECT (COUNT(*) > 0) AS record_exists FROM %s WHERE idx = %d AND name = '%s'`
+	selFromMigTable = `SELECT (COUNT(*) > 0) AS record_exists 
+		FROM %s 
+		WHERE idx = %d 
+		    AND name = '%s'`
 
 	insertMigTable = `INSERT INTO %s (id, idx, name, created_at)
 	VALUES (:id, :idx, :name, :created_at);`
