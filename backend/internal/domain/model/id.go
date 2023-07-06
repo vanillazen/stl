@@ -22,12 +22,7 @@ func (i *ID) GenID(id ...uuid.UUID) error {
 		return nil
 	}
 
-	val, err := uuid.New()
-	if err != nil {
-		return err
-	}
-
-	i.val = val
+	i.val = uuid.NewUUID()
 
 	return nil
 }
