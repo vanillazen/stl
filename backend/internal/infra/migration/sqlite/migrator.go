@@ -462,12 +462,9 @@ func (m *Migrator) Reset() error {
 func (m *Migrator) recMigration(e Exec) error {
 	st := fmt.Sprintf(insertMigTable, migTable)
 
-	uid, err := uuid.New()
-	if err != nil {
-		return errors.Wrap(err, "rec migration error")
-	}
+	uid := uuid.NewUUID()
 
-	_, err = e.GetTx().Exec(st,
+	_, err := e.GetTx().Exec(st,
 		ToNullString(uid.Val),
 		ToNullInt64(e.GetIndex()),
 		ToNullString(e.GetName()),
