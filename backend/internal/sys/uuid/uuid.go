@@ -2,17 +2,16 @@ package uuid
 
 import (
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
 	"github.com/vanillazen/stl/backend/internal/sys/errors"
 )
 
-type (
-	UUID struct {
-		Val string
-	}
-)
+type UUID struct {
+	Val string
+}
 
 var (
 	Nil = UUID{
@@ -24,50 +23,59 @@ var (
 	NotValidUUIDErr = errors.NewError("not a valid UUID")
 )
 
-// NewUUID should return an additional error value.
-// TODO: Implement additional error return value
-func NewUUID(uuidStr string) UUID {
-	ok := Validate(uuidStr)
-	if !ok {
-		return Nil
-	}
+// NewUUID generates a new UUID.
+func NewUUID() UUID {
+	uuid := make([]byte, 16)
+	_, _ = rand.Read(uuid)
 
-	return UUID{Val: uuidStr}
+	// Set the version (4) and variant (RFC 4122) bits
+	uuid[6] = (uuid[6] & 0x0f) | 0x40
+	uuid[8] = (uuid[8] & 0x3f) | 0x80
+
+	return UUID{Val: formatUUID(uuid)}
 }
 
-func New() (uid UUID, err error) {
-	uuid := make([]byte, 16)
-	_, err = rand.Read(uuid)
-	if err != nil {
-		return uid, err
+func Must() UUID {
+	return NewUUID()
+}
+
+func Parse(s string) (UUID, error) {
+	if !Validate(s) {
+		return Nil, NotValidUUIDErr
 	}
+	return UUID{Val: s}, nil
+}
 
-	uuid[6] = (uuid[6] & 0x0f) | 0x40 // Version 4
-	uuid[8] = (uuid[8] & 0x3f) | 0x80 // Variant RFC 4122
+func MustParse(s string) UUID {
+	uuid, err := Parse(s)
+	if err != nil {
+		panic(err)
+	}
+	return uuid
+}
 
-	return UUID{
-		Val: formatUUID(uuid),
-	}, nil
+func (uid UUID) Equal(u2 UUID) bool {
+	return uid.Val == u2.Val
+}
+
+func (uid UUID) Compare(u2 UUID) int {
+	return strings.Compare(uid.Val, u2.Val)
+}
+
+func (uid UUID) Nil() bool {
+	return uid.Val == "00000000-0000-0000-0000-000000000000"
 }
 
 func (uid UUID) String() string {
-	if !Validate(uid.Val) {
-		return Nil.Val
-	}
-
 	return uid.Val
 }
 
-func formatUUID(uuid []byte) string {
-	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
+func (uid UUID) MarshalText() ([]byte, error) {
+	return []byte(uid.Val), nil
 }
 
-func Parse(uuidStr string) (uid UUID, err error) {
-	if !Validate(uuidStr) {
-		return Nil, NotValidUUIDErr
-	}
-
-	return UUID{Val: uuidStr}, nil
+func ParseBytes(input []byte) (UUID, error) {
+	return Parse(string(input))
 }
 
 func Validate(uuid string) bool {
@@ -77,6 +85,11 @@ func Validate(uuid string) bool {
 		return false
 	}
 
-	_, err := fmt.Sscanf(trimmedUUID, "%x")
+	_, err := hex.DecodeString(trimmedUUID)
 	return err == nil
+}
+
+func formatUUID(uuid []byte) string {
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 }

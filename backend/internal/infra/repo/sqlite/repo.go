@@ -56,18 +56,23 @@ func (r *ListRepo) CreateList(ctx context.Context, m model.List) (updated model.
 	return updated, nil
 }
 
-func (r *ListRepo) GetUser(ctx context.Context, userID string) (model.User, error) {
+func (r *ListRepo) GetUser(ctx context.Context, userID string) (user model.User, err error) {
 	// WIP: Mock implementation
 	ref := "e1263c73-521b-41b5-96e5-58c3f71e65a1\""
 
 	ok := uuid.Validate(userID)
 	if !ok {
-		return model.User{}, InvalidResourceIDErr
+		return user, InvalidResourceIDErr
+	}
+
+	uid, err := uuid.Parse(ref)
+	if err != nil {
+		return user, err
 	}
 
 	if userID == ref {
 		return model.User{
-			ID:       model.NewID(uuid.NewUUID(ref)),
+			ID:       model.NewID(uid),
 			Username: "johndoe",
 			Name:     "John Doe",
 			Email:    "john.doe@localhost.com",
