@@ -10,6 +10,8 @@ import (
 	"github.com/vanillazen/stl/backend/internal/domain/service"
 	"github.com/vanillazen/stl/backend/internal/infra/db"
 	"github.com/vanillazen/stl/backend/internal/infra/db/sqlite"
+	"github.com/vanillazen/stl/backend/internal/infra/fixture"
+	sqlite2 "github.com/vanillazen/stl/backend/internal/infra/fixture/sqlite"
 	http2 "github.com/vanillazen/stl/backend/internal/infra/http"
 	migrator "github.com/vanillazen/stl/backend/internal/infra/migration"
 	mig "github.com/vanillazen/stl/backend/internal/infra/migration/sqlite"
@@ -30,7 +32,8 @@ type App struct {
 	http       *http2.Server
 	db         db.DB
 	repo       port.ListRepo
-	migrator   migrator.Migrator // TODO: This will be a generic migrator interface.
+	migrator   migrator.Migrator
+	fixture    fixture.Fixture
 	svc        service.ListService
 	apiDoc     string
 }
@@ -73,6 +76,9 @@ func (app *App) Setup(ctx context.Context) error {
 	// Migration
 	app.migrator = mig.NewMigrator(app.fs, app.db, app.opts...)
 
+	// Pre-population
+	app.fixture = sqlite2.NewFixture(app.db, app.opts...)
+
 	// Repos
 	app.repo = sqliterepo.NewListRepo(app.db, app.opts...)
 
@@ -111,6 +117,12 @@ func (app *App) Start(ctx context.Context) (err error) {
 	err = app.migrator.Start(ctx)
 	if err != nil {
 		app.Log().Errorf("%s start error: %s", app.Name(), err)
+		return err
+	}
+
+	err = app.fixture.Start(ctx)
+	if err != nil {
+		err = errors.Wrapf(err, "%s setup error", app.Name())
 		return err
 	}
 

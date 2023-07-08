@@ -13,7 +13,7 @@ type (
 	ListService interface {
 		sys.Core
 		CreateList(ctx context.Context, req t.CreateListReq) t.CreateListRes
-		//GetList(...)
+		GetList(ctx context.Context, req t.GetListReq) t.GetListRes
 		//UpdateList(...)
 		//DeleteList(...)
 		//AddTask(...)
@@ -68,6 +68,16 @@ func (rs *List) CreateList(ctx context.Context, req t.CreateListReq) (res t.Crea
 	}
 
 	return t.NewCreateListRes(nil, nil, nil)
+}
+
+func (rs *List) GetList(ctx context.Context, req t.GetListReq) (res t.GetListRes) {
+	_, err := rs.Repo().GetList(ctx, req.UserID, true)
+	if err != nil {
+		err = errors.Wrap(err, "get list repo error")
+		return t.NewGetListRes(nil, err, rs.Cfg())
+	}
+
+	return t.NewGetListRes(nil, nil, nil)
 }
 
 func (rs *List) Repo() port.ListRepo {
