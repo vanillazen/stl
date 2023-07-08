@@ -120,11 +120,11 @@ func (app *App) Start(ctx context.Context) (err error) {
 		return err
 	}
 
-	err = app.fixture.Start(ctx)
-	if err != nil {
-		err = errors.Wrapf(err, "%s setup error", app.Name())
-		return err
-	}
+	//err = app.fixture.Start(ctx)
+	//if err != nil {
+	//	err = errors.Wrapf(err, "%s setup error", app.Name())
+	//	return err
+	//}
 
 	err = app.svc.Start(ctx)
 	if err != nil {
