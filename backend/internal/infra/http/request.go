@@ -2,8 +2,6 @@ package http
 
 import (
 	"net/http"
-
-	"github.com/vanillazen/stl/backend/internal/sys/uuid"
 )
 
 type ContextKey string
@@ -47,12 +45,12 @@ func (h *APIHandler) resourceID(r *http.Request) (resID string, ok bool) {
 		return resID, false
 	}
 
-	id, ok := value.(uuid.UUID)
+	id, ok := value.(string)
 	if !ok {
 		return resID, false
 	}
 
-	return id.String(), true
+	return id, true
 }
 
 func (h *APIHandler) assetReq(r *http.Request) (req AssetRequest, ok bool) {
