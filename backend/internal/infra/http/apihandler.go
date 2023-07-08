@@ -38,37 +38,28 @@ func NewAPIHandler(svc service.ListService, apiDoc string, opts ...sys.Option) *
 func (h *APIHandler) handleV1(w http.ResponseWriter, r *http.Request) {
 	pathSegments := strings.Split(r.URL.Path, "/")
 
-	userIDIndex := -1
+	resIDIdx := -1
 	for i, segment := range pathSegments {
 		ok := uuid.Validate(segment)
 		if ok {
-			userIDIndex = i
+			resIDIdx = i
 			break
 		}
 	}
 
-	if userIDIndex == -1 {
+	if resIDIdx == -1 {
 		http.NotFound(w, r)
 		return
 	}
 
-	userIDSegment := pathSegments[userIDIndex]
-	ctx := context.WithValue(r.Context(), UserIDCtxKey, userIDSegment)
+	resIDSegment := pathSegments[resIDIdx]
+	ctx := context.WithValue(r.Context(), ResIDCtxKey, resIDSegment)
 	r = r.WithContext(ctx)
 
-	resIDSegment := pathSegments[len(pathSegments)-1]
-	resID, err := uuid.Parse(resIDSegment)
-	if err != nil {
-		h.Log().Debug("Not a resource URL:", r.URL.Path)
-	} else {
-		ctx = context.WithValue(r.Context(), ResIDCtxKey, resID)
-		r = r.WithContext(ctx)
-	}
-
-	resource := strings.ToLower(pathSegments[userIDIndex+1])
+	resource := strings.ToLower(pathSegments[resIDIdx-1])
 
 	switch resource {
-	case "list":
+	case "lists":
 		h.handleList(w, r)
 	default:
 		h.handleError(w, InvalidResourceErr)
@@ -148,7 +139,7 @@ func (h *APIHandler) handleOpenAPIDocs(w http.ResponseWriter, r *http.Request) {
 func (h *APIHandler) User(r *http.Request) (userID string, err error) {
 	// Authentication mechanism not yet established.
 	// WIP: A hardcoded value is returned for now.
-	uid := "e1263c73-521b-41b5-96e5-58c3f71e65a1"
+	uid := "0792b97b-4f88-42a8-a035-1d0aad0ae7f8"
 
 	ok := uuid.Validate(uid)
 	if !ok {
