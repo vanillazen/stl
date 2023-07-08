@@ -6,7 +6,7 @@ type (
 		Name        string
 		Description string
 		Owner       User
-		Tasks       []*Task
+		Tasks       []Task
 		Audit
 	}
 )

@@ -11,7 +11,7 @@ const (
 
 type (
 	ServiceRes struct {
-		msg            string        // Human readable message exposed to client
+		msg            string        // Human-readable message exposed to client
 		exposeInternal bool          // Expose internal error to te client flag
 		valErrSet      v.ValErrorSet // Properties validation errors
 		err            error         // Internal error

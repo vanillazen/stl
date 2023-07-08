@@ -18,8 +18,8 @@ type (
 		Repo
 		// CreateList in persistence
 		CreateList(ctx context.Context, list model.List) (model.List, error)
-		//// GetList from persistence
-		//GetList(ctx context.Context, listID, userID string, preload ...bool) (user model.List, err error)
+		// GetList from persistence
+		GetList(ctx context.Context, userID string, preload ...bool) (list model.List, err error)
 		//// UpdateList in persistence
 		//UpdateList(ctx context.Context, task model.List, userID string) error
 		//// DeleteList in persistence
