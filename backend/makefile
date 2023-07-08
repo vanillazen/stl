@@ -32,3 +32,8 @@ openapi/gen:
 redocly/install:
 	npm i -g @redocly/cli@latest
 
+# API
+.PHONY: api/get-list
+api/get-list:
+	./scripts/curl/get-list.sh -h localhost -p 8080 -l fa7af80c-63e0-413c-aa3d-b7e417459a69
+

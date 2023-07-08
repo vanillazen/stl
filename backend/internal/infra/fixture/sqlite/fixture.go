@@ -76,7 +76,7 @@ func (f *Fixture) PopulateDB() error {
 	// Users
 	users := []User{
 		{
-			ID:        genID(),
+			ID:        "0792b97b-4f88-42a8-a035-1d0aad0ae7f8",
 			Username:  "user1",
 			Name:      "User 1",
 			Email:     "user1@example.com",
@@ -111,7 +111,7 @@ func (f *Fixture) PopulateDB() error {
 	// Lists
 	lists := []List{
 		{
-			ID:          genID(),
+			ID:          "cdc7a443-3c6a-431b-b45a-b14735953a19",
 			Name:        "List 1",
 			Description: "List 1 Description",
 			OwnerID:     users[0].ID,
