@@ -11,6 +11,7 @@ import (
 	"github.com/vanillazen/stl/backend/internal/sys"
 	"github.com/vanillazen/stl/backend/internal/sys/errors"
 	"github.com/vanillazen/stl/backend/internal/sys/uuid"
+	"github.com/vanillazen/stl/backend/internal/transport"
 )
 
 type (
@@ -116,11 +117,25 @@ func (h *APIHandler) handleList(w http.ResponseWriter, r *http.Request) {
 // @Router /api/v1/lists/{id} [get]
 // @tags Lists
 func (h *APIHandler) GetList(w http.ResponseWriter, r *http.Request) {
-	//TODO not implemented yet
-	_, err := w.Write([]byte("GetLists not implemented yet"))
+	ctx := r.Context()
+
+	user, err := h.User(r)
 	if err != nil {
-		h.Log().Error(err)
+		h.handleError(w, errors.Wrap(err, "get list error"))
+		return
 	}
+
+	req := transport.GetListReq{
+		UserID: user,
+	}
+
+	res := h.Service().GetList(ctx, req)
+	if err = res.Err(); err != nil {
+		err = errors.Wrap(err, "get list error")
+		h.handleError(w, err)
+	}
+
+	// Return in wrapped in a response
 }
 
 func (h *APIHandler) handleOpenAPIDocs(w http.ResponseWriter, r *http.Request) {
