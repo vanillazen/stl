@@ -1,23 +1,21 @@
 definitions:
-  http.APIError:
-    properties:
-      internalError:
-        type: string
-      message:
-        type: string
-    type: object
   http.APIResponse:
     properties:
       count:
         type: integer
       data: {}
       error:
-        $ref: '#/definitions/http.APIError'
-      message:
-        type: string
+        $ref: '#/definitions/http.Status'
       pages:
         type: integer
-      success:
+    type: object
+  http.Status:
+    properties:
+      internalError:
+        type: string
+      message:
+        type: string
+      ok:
         type: boolean
     type: object
 info:
@@ -25,10 +23,10 @@ info:
 paths:
   /api/v1/lists/{id}:
     get:
-      description: Gets a list by its ID
+      description: Gets a list by its UUID
       operationId: get-list
       parameters:
-      - description: List ID formatted as an UUID string
+      - description: List UUID formatted as an UUID string
         in: path
         name: id
         required: true
@@ -52,7 +50,7 @@ paths:
           description: Method Not Allowed
           schema:
             $ref: '#/definitions/http.APIResponse'
-      summary: Get list by ID
+      summary: Get list by UUID
       tags:
       - Lists
 swagger: "2.0"
