@@ -96,11 +96,11 @@ func (h *APIHandler) handleList(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetList return user list
-// @summary Get list by UUID
-// @description Gets a list by its UUID
+// @summary Get list by ID
+// @description Gets a list by its ID
 // @id get-list
 // @produce json
-// @Param id path string true "List UUID formatted as an UUID string"
+// @Param id path string true "List ID formatted as an UUID string"
 // @Success 200 {object} APIResponse
 // @Success 400 {object} APIResponse
 // @Success 404 {object} APIResponse
@@ -157,9 +157,7 @@ func (h *APIHandler) User(r *http.Request) (userID string, err error) {
 	return uid, nil
 }
 
-// List returns the list UUID from request context.
-// Chi router + OpenAPI makes this unnecessary but can be useful when using
-// stdlib or a Chi router custom middleware.
+// List returns the list ID from request context.
 func (h *APIHandler) List(r *http.Request) (listID string, err error) {
 	val := r.Context().Value(ListCtxKey)
 	if val != nil {
