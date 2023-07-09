@@ -93,3 +93,18 @@ func formatUUID(uuid []byte) string {
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
 		uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 }
+
+func (uid *UUID) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		uid.Val = string(v)
+	case string:
+		uid.Val = v
+	case nil:
+		uid.Val = ""
+	default:
+		return fmt.Errorf("unsupported scan, storing driver.Value type %T into type UUID", value)
+	}
+
+	return nil
+}

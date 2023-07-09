@@ -1,36 +1,38 @@
 package model
 
-import "github.com/vanillazen/stl/backend/internal/sys/uuid"
+import (
+	"github.com/vanillazen/stl/backend/internal/sys/uuid"
+)
 
 type (
 	ID struct {
-		val uuid.UUID
+		UUID uuid.UUID
 	}
 )
 
 func NewID(uid uuid.UUID) ID {
-	return ID{val: uid}
+	return ID{UUID: uid}
 }
 
 func (i *ID) GenID(id ...uuid.UUID) error {
-	if i.val != uuid.Nil {
+	if i.UUID != uuid.Nil {
 		return nil // already has a value assigned
 	}
 
 	if len(id) > 0 {
-		i.val = id[0] // If value is provided, use it
+		i.UUID = id[0] // If value is provided, use it
 		return nil
 	}
 
-	i.val = uuid.NewUUID()
+	i.UUID = uuid.NewUUID()
 
 	return nil
 }
 
 func (i *ID) Val() uuid.UUID {
-	return i.val
+	return i.UUID
 }
 
 func (i *ID) String() string {
-	return i.val.Val
+	return i.UUID.Val
 }

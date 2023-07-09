@@ -6,9 +6,9 @@ type (
 		ListID      ID
 		Name        string
 		Description string
-		Category    []string
-		Tags        []string
-		Location    []string
+		Category    StringSlice
+		Tags        StringSlice
+		Location    StringSlice
 		Audit
 	}
 )

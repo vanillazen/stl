@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -96,11 +97,11 @@ func (h *APIHandler) handleList(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetList return user list
-// @summary Get list by ID
-// @description Gets a list by its ID
+// @summary Get list by UUID
+// @description Gets a list by its UUID
 // @id get-list
 // @produce json
-// @Param id path string true "List ID formatted as an UUID string"
+// @Param id path string true "List UUID formatted as an UUID string"
 // @Success 200 {object} APIResponse
 // @Success 400 {object} APIResponse
 // @Success 404 {object} APIResponse
@@ -110,14 +111,21 @@ func (h *APIHandler) handleList(w http.ResponseWriter, r *http.Request) {
 func (h *APIHandler) GetList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	user, err := h.User(r)
+	userID, err := h.User(r)
 	if err != nil {
 		h.handleError(w, errors.Wrap(err, "get list error"))
 		return
 	}
 
+	listID, ok := h.resourceID(r)
+	if !ok {
+		h.handleError(w, errors.Wrap(NoResourceErr, "get list error"))
+		return
+	}
+
 	req := transport.GetListReq{
-		UserID: user,
+		UserID: userID,
+		ListID: listID,
 	}
 
 	res := h.Service().GetList(ctx, req)
@@ -126,6 +134,19 @@ func (h *APIHandler) GetList(w http.ResponseWriter, r *http.Request) {
 		h.handleError(w, err)
 	}
 
+	// WIP: Move this to a proper place
+	response := APIResponse{
+		Success: true,
+		Data:    res,
+	}
+
+	w.WriteHeader(http.StatusOK)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		h.Log().Error(errors.Wrap(err, "get list error"))
+	}
+
+	return
 	// Return in wrapped in a response
 }
 
@@ -149,7 +170,7 @@ func (h *APIHandler) User(r *http.Request) (userID string, err error) {
 	return uid, nil
 }
 
-// List returns the list ID from request context.
+// List returns the list UUID from request context.
 // Chi router + OpenAPI makes this unnecessary but can be useful when using
 // stdlib or a Chi router custom middleware.
 func (h *APIHandler) List(r *http.Request) (listID string, err error) {
