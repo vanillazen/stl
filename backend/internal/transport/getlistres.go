@@ -30,9 +30,23 @@ type (
 	}
 )
 
-func NewGetListRes(valErrSet v.ValErrorSet, err error, cfg *config.Config) GetListRes {
+func NewGetListRes(valErrSet v.ValErrorSet, err error, cfg *config.Config, list model.List) GetListRes {
+	var tasks []Task
+	for _, m := range list.Tasks {
+		tasks = append(tasks, Task{
+			Name:        m.Name,
+			Description: m.Description,
+			Category:    m.Category,
+			Tags:        m.Tags,
+			Location:    m.Location,
+		})
+	}
+
 	return GetListRes{
-		ServiceRes: NewServiceRes(valErrSet, err, cfg),
+		ServiceRes:  NewServiceRes(valErrSet, err, cfg),
+		Name:        list.Name,
+		Description: list.Description,
+		Tasks:       tasks,
 	}
 }
 

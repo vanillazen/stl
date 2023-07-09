@@ -56,12 +56,12 @@ func (r *ListRepo) CreateList(ctx context.Context, m model.List) (updated model.
 	return updated, nil
 }
 
-func (r *ListRepo) GetList(ctx context.Context, userID string, preload ...bool) (list model.List, err error) {
+func (r *ListRepo) GetList(ctx context.Context, userID, listID string, preload ...bool) (list model.List, err error) {
 	dbase := r.DB(ctx).DB()
 
 	query := `
-		SELECT l.id, l.name, l.description, u.id, u.username, u.name, u.email, u.password, l.created_at, l.updated_at,
-			t.id, t.list_id, t.name, t.description, t.category, t.tags, t.location, t.created_at, t.updated_at
+		SELECT l.id, l.name, l.description, l.created_at, l.updated_at, 
+		       t.id, t.list_id, t.name, t.description, t.category, t.tags, t.location, t.created_at, t.updated_at
 		FROM lists l
 		INNER JOIN users u ON l.owner_id = u.id
 		LEFT JOIN tasks t ON l.id = t.list_id
@@ -82,20 +82,20 @@ func (r *ListRepo) GetList(ctx context.Context, userID string, preload ...bool) 
 		var task model.Task
 
 		err := rows.Scan(
-			list.ID.String(),
-			list.Name,
-			list.Description,
-			list.CreatedAt,
-			list.UpdatedAt,
-			task.ID.String(),
-			task.ListID.String(),
-			task.Name,
-			task.Description,
-			task.Category,
-			task.Tags,
-			task.Location,
-			task.CreatedAt,
-			task.UpdatedAt,
+			&list.ID.UUID,
+			&list.Name,
+			&list.Description,
+			&list.CreatedAt,
+			&list.UpdatedAt,
+			&task.ID.UUID,
+			&task.ListID.UUID,
+			&task.Name,
+			&task.Description,
+			&task.Category,
+			&task.Tags,
+			&task.Location,
+			&task.CreatedAt,
+			&task.UpdatedAt,
 		)
 		if err != nil {
 			return list, err
