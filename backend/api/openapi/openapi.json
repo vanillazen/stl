@@ -6,19 +6,19 @@
     "paths": {
         "/api/v1/lists/{id}": {
             "get": {
-                "description": "Gets a list by its ID",
+                "description": "Gets a list by its UUID",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Lists"
                 ],
-                "summary": "Get list by ID",
+                "summary": "Get list by UUID",
                 "operationId": "get-list",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "List ID formatted as an UUID string",
+                        "description": "List UUID formatted as an UUID string",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -54,17 +54,6 @@
         }
     },
     "definitions": {
-        "http.APIError": {
-            "type": "object",
-            "properties": {
-                "internalError": {
-                    "type": "string"
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
         "http.APIResponse": {
             "type": "object",
             "properties": {
@@ -73,15 +62,23 @@
                 },
                 "data": {},
                 "error": {
-                    "$ref": "#/definitions/http.APIError"
+                    "$ref": "#/definitions/http.Status"
+                },
+                "pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "http.Status": {
+            "type": "object",
+            "properties": {
+                "internalError": {
+                    "type": "string"
                 },
                 "message": {
                     "type": "string"
                 },
-                "pages": {
-                    "type": "integer"
-                },
-                "success": {
+                "ok": {
                     "type": "boolean"
                 }
             }
