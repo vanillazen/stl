@@ -71,13 +71,13 @@ func (rs *List) CreateList(ctx context.Context, req t.CreateListReq) (res t.Crea
 }
 
 func (rs *List) GetList(ctx context.Context, req t.GetListReq) (res t.GetListRes) {
-	_, err := rs.Repo().GetList(ctx, req.UserID, true)
+	list, err := rs.Repo().GetList(ctx, req.UserID, req.ListID, true)
 	if err != nil {
 		err = errors.Wrap(err, "get list repo error")
-		return t.NewGetListRes(nil, err, rs.Cfg())
+		return t.NewGetListRes(nil, err, rs.Cfg(), list)
 	}
 
-	return t.NewGetListRes(nil, nil, nil)
+	return t.NewGetListRes(nil, nil, rs.Cfg(), list)
 }
 
 func (rs *List) Repo() port.ListRepo {

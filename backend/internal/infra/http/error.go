@@ -18,7 +18,7 @@ var (
 	MethodNotAllowedErr   = errors.NewError("method not allowed")
 	InvalidResourceErr    = errors.NewError("invalid resource")
 	NoUserErr             = errors.NewError("not a valid user in session")
-	NoResourceErr         = errors.NewError("no resource ID provided")
+	NoResourceErr         = errors.NewError("no resource UUID provided")
 	NoAssetReqErr         = errors.NewError("no asset request provided")
 	InvalidRequestErr     = errors.NewError("invalid request")
 	InvalidRequestDataErr = errors.NewError("invalid request data")
