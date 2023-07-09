@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -113,7 +112,7 @@ func (h *APIHandler) GetList(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := h.User(r)
 	if err != nil {
-		h.handleError(w, errors.Wrap(err, "get list error"))
+		h.handleError(w, errors.Wrap(err, ""))
 		return
 	}
 
@@ -132,22 +131,10 @@ func (h *APIHandler) GetList(w http.ResponseWriter, r *http.Request) {
 	if err = res.Err(); err != nil {
 		err = errors.Wrap(err, "get list error")
 		h.handleError(w, err)
+		return
 	}
 
-	// WIP: Move this to a proper place
-	response := APIResponse{
-		Success: true,
-		Data:    res,
-	}
-
-	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(response)
-	if err != nil {
-		h.Log().Error(errors.Wrap(err, "get list error"))
-	}
-
-	return
-	// Return in wrapped in a response
+	h.handleSuccess(w, res, 1, 1)
 }
 
 func (h *APIHandler) handleOpenAPIDocs(w http.ResponseWriter, r *http.Request) {

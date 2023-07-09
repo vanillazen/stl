@@ -48,11 +48,6 @@ func (r *ListRepo) CreateList(ctx context.Context, m model.List) (updated model.
 		return m, errors.Wrap(err, "create list repo error")
 	}
 
-	//db := r.db.DB()
-	//if err != nil {
-	//	return m, errors.Wrap(err, "create list repo err")
-	//}
-	//
 	return updated, nil
 }
 

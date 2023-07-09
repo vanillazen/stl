@@ -11,10 +11,9 @@ const (
 
 type (
 	ServiceRes struct {
-		msg            string        // Human-readable message exposed to client
-		exposeInternal bool          // Expose internal error to te client flag
-		valErrSet      v.ValErrorSet // Properties validation errors
-		err            error         // Internal error
+		msg       string        // Human-readable message exposed to client
+		valErrSet v.ValErrorSet // Properties validation errors
+		err       error         // Internal error
 	}
 )
 
@@ -27,18 +26,13 @@ func (sr *ServiceRes) ValidationErrors() v.ValErrorSet {
 }
 
 func (sr *ServiceRes) Err() error {
-	if sr.exposeInternal {
-		return sr.err
-	}
-
-	return nil
+	return sr.err
 }
 
 func NewServiceRes(valErrSet v.ValErrorSet, err error, cfg *config.Config) ServiceRes {
 	return ServiceRes{
-		msg:            validationError,
-		exposeInternal: cfg.GetBool(config.Key.APIErrorExposeInt),
-		valErrSet:      valErrSet,
-		err:            err,
+		msg:       validationError,
+		valErrSet: valErrSet,
+		err:       err,
 	}
 }
