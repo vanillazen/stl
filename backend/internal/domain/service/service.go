@@ -73,7 +73,7 @@ func (rs *List) CreateList(ctx context.Context, req t.CreateListReq) (res t.Crea
 func (rs *List) GetList(ctx context.Context, req t.GetListReq) (res t.GetListRes) {
 	list, err := rs.Repo().GetList(ctx, req.UserID, req.ListID, true)
 	if err != nil {
-		err = errors.Wrap(err, "get list repo error")
+		err = errors.Wrap(err, "get list error")
 		return t.NewGetListRes(nil, err, rs.Cfg(), list)
 	}
 
