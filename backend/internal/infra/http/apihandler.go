@@ -33,18 +33,19 @@ func NewAPIHandler(svc service.ListService, apiDoc string, opts ...sys.Option) *
 }
 
 func (h *APIHandler) handleList(w http.ResponseWriter, r *http.Request) {
+	res, ok := h.resource(r)
+	if !ok {
+		h.handleError(w, http.StatusBadRequest, NoResourceErr)
+	}
+
 	switch r.Method {
 	case http.MethodGet:
-		_, ok := h.resourceID(r)
-
-		switch ok {
-		case true:
+		if res.IDLevel1() != "" {
 			h.GetList(w, r)
-			h.Log().Error("not implemented yet")
-
-		default:
-			//h.GetLists(w, r)
-			h.Log().Error("not implemented yet")
+			return
+		} else {
+			h.GetLists(w, r)
+			return
 		}
 
 	case http.MethodPost:
@@ -56,9 +57,12 @@ func (h *APIHandler) handleList(w http.ResponseWriter, r *http.Request) {
 		h.Log().Error("not implemented yet")
 
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		h.handleError(w, 0, MethodNotAllowedErr)
+		h.handleError(w, http.StatusMethodNotAllowed, MethodNotAllowedErr)
 	}
+}
+
+func (h *APIHandler) GetLists(w http.ResponseWriter, r *http.Request) {
+	h.Log().Error("not implemented yet")
 }
 
 // GetList return user list
@@ -82,7 +86,7 @@ func (h *APIHandler) GetList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resource, ok := h.resourceID(r)
+	resource, ok := h.resource(r)
 	if !ok {
 		h.handleError(w, 0, errors.Wrap(NoResourceErr, "get list error"))
 		return
@@ -90,7 +94,7 @@ func (h *APIHandler) GetList(w http.ResponseWriter, r *http.Request) {
 
 	req := transport.GetListReq{
 		UserID: userID,
-		ListID: resource.L1ID(),
+		ListID: resource.IDLevel1(),
 	}
 
 	res := h.Service().GetList(ctx, req)

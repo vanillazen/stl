@@ -39,7 +39,7 @@ func (h *APIHandler) userID(r *http.Request) (userID string, ok bool) {
 	return userID, true
 }
 
-func (h *APIHandler) resourceID(r *http.Request) (ri ResourceInfo, ok bool) {
+func (h *APIHandler) resource(r *http.Request) (ri ResourceInfo, ok bool) {
 	value := r.Context().Value(ResourceCtxKey)
 	if value == nil {
 		return ri, false
