@@ -53,7 +53,11 @@ While abstractions are encouraged, the project prioritizes simplicity over compl
 ## Tests
 ```shell
 $ make test
-...
+make -f makefile.test test-selected
+make[1]: Entering directory '/home/adrian/Projects/labs/vanillazen/stl/backend'
+clear
+make -f makefile.test test-migrator
+make[2]: Entering directory '/home/adrian/Projects/labs/vanillazen/stl/backend'
 go test -v -run TestMigrator -count=1 -timeout=10s internal/infra/migration/sqlite/*.go
 === RUN   TestMigrator
 === RUN   TestMigrator/TestMigrateBase
@@ -71,14 +75,30 @@ go test -v -run TestMigrator -count=1 -timeout=10s internal/infra/migration/sqli
 === RUN   TestMigrator/TestRollbackAll
 === NAME  TestMigrator
     migrator_test.go:170: TestRollbackAll: OK
---- PASS: TestMigrator (0.51s)
-    --- PASS: TestMigrator/TestMigrateBase (0.06s)
-    --- PASS: TestMigrator/TestMigrateAndAgain (0.01s)
-    --- PASS: TestMigrator/TestRollback1 (0.24s)
-    --- PASS: TestMigrator/TestRollback2 (0.09s)
-    --- PASS: TestMigrator/TestRollbackAll (0.09s)
+--- PASS: TestMigrator (0.55s)
+    --- PASS: TestMigrator/TestMigrateBase (0.15s)
+    --- PASS: TestMigrator/TestMigrateAndAgain (0.02s)
+    --- PASS: TestMigrator/TestRollback1 (0.11s)
+    --- PASS: TestMigrator/TestRollback2 (0.14s)
+    --- PASS: TestMigrator/TestRollbackAll (0.13s)
 PASS
-ok      command-line-arguments  0.509s
+ok  	command-line-arguments	0.558s
+make[2]: Leaving directory '/home/adrian/Projects/labs/vanillazen/stl/backend'
+make -f makefile.test test-http
+make[2]: Entering directory '/home/adrian/Projects/labs/vanillazen/stl/backend'
+go test -v -run TestGetResourceInfo -count=1 -timeout=10s internal/infra/http/*.go
+=== RUN   TestGetResourceInfo
+=== RUN   TestGetResourceInfo/Valid_URL_parts
+=== RUN   TestGetResourceInfo/Invalid_URL_parts_count
+=== RUN   TestGetResourceInfo/Invalid_URL_ID
+--- PASS: TestGetResourceInfo (0.00s)
+    --- PASS: TestGetResourceInfo/Valid_URL_parts (0.00s)
+    --- PASS: TestGetResourceInfo/Invalid_URL_parts_count (0.00s)
+    --- PASS: TestGetResourceInfo/Invalid_URL_ID (0.00s)
+PASS
+ok  	command-line-arguments	0.003s
+make[2]: Leaving directory '/home/adrian/Projects/labs/vanillazen/stl/backend'
+make[1]: Leaving directory '/home/adrian/Projects/labs/vanillazen/stl/backend'
 ```
 
 ## Notes
