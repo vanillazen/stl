@@ -24,7 +24,7 @@ import (
 type ResourceInfo struct {
 	Levels []string
 	IDs    []string
-	Error  error
+	Error  errors.Error
 }
 
 type HandlerFunc func(*APIHandler, http.ResponseWriter, *http.Request)
@@ -43,9 +43,9 @@ func (h *APIHandler) handleV1(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resourceInfo := getResourceInfo(parts[3:])
+	resourceInfo := GetResourceInfo(parts[3:])
 
-	if resourceInfo.Error != nil {
+	if resourceInfo.Error != errors.Empty {
 		http.Error(w, resourceInfo.Error.Error(), http.StatusBadRequest)
 		return
 	}
@@ -63,7 +63,7 @@ func (h *APIHandler) handleV1(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getResourceInfo(parts []string) ResourceInfo {
+func GetResourceInfo(parts []string) ResourceInfo {
 	resourceInfo := ResourceInfo{}
 	levelsCount := len(parts)
 
