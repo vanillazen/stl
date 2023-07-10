@@ -20,8 +20,8 @@ type AssetRequest struct {
 }
 
 const (
-	UserIDCtxKey   = "user"
-	ResIDCtxKey    = "resource"
+	UserIDCtxKey   = "resource"
+	ResourceCtxKey = "resource"
 	AssetReqCtxKey = "assetreq"
 )
 
@@ -39,18 +39,18 @@ func (h *APIHandler) userID(r *http.Request) (userID string, ok bool) {
 	return userID, true
 }
 
-func (h *APIHandler) resourceID(r *http.Request) (resID string, ok bool) {
-	value := r.Context().Value(ResIDCtxKey)
+func (h *APIHandler) resourceID(r *http.Request) (ri ResourceInfo, ok bool) {
+	value := r.Context().Value(ResourceCtxKey)
 	if value == nil {
-		return resID, false
+		return ri, false
 	}
 
-	id, ok := value.(string)
+	ri, ok = value.(ResourceInfo)
 	if !ok {
-		return resID, false
+		return ri, false
 	}
 
-	return id, true
+	return ri, true
 }
 
 func (h *APIHandler) assetReq(r *http.Request) (req AssetRequest, ok bool) {

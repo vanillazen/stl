@@ -48,7 +48,7 @@ func (h *APIHandler) handleSuccess(w http.ResponseWriter, payload interface{}, c
 	return
 }
 
-func (h *APIHandler) handleError(w http.ResponseWriter, handlerError error, message ...string) {
+func (h *APIHandler) handleError(w http.ResponseWriter, httpStatus int, handlerError error, message ...string) {
 	var msg string
 	if len(message) > 0 {
 		msg = message[0]
@@ -69,7 +69,7 @@ func (h *APIHandler) handleError(w http.ResponseWriter, handlerError error, mess
 
 	h.Log().Errorf("handler error:\n%s", errors.Stacktrace(handlerError))
 
-	w.WriteHeader(http.StatusInternalServerError)
+	w.WriteHeader(httpStatus)
 	err := json.NewEncoder(w).Encode(response)
 	if err != nil {
 		h.Log().Error(errors.Wrap(err, "error encoding handler error"))
