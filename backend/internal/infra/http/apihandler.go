@@ -1,16 +1,13 @@
 package http
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/vanillazen/stl/backend/internal/domain/service"
 	"github.com/vanillazen/stl/backend/internal/sys"
 	"github.com/vanillazen/stl/backend/internal/sys/errors"
-	"github.com/vanillazen/stl/backend/internal/sys/uuid"
 	"github.com/vanillazen/stl/backend/internal/transport"
 )
 
@@ -32,37 +29,6 @@ func NewAPIHandler(svc service.ListService, apiDoc string, opts ...sys.Option) *
 		SimpleCore: sys.NewCore("list-handler", opts...),
 		svc:        svc,
 		apiDoc:     apiDoc,
-	}
-}
-
-func (h *APIHandler) handleV1(w http.ResponseWriter, r *http.Request) {
-	pathSegments := strings.Split(r.URL.Path, "/")
-
-	resIDIdx := -1
-	for i, segment := range pathSegments {
-		ok := uuid.Validate(segment)
-		if ok {
-			resIDIdx = i
-			break
-		}
-	}
-
-	if resIDIdx == -1 {
-		http.NotFound(w, r)
-		return
-	}
-
-	resIDSegment := pathSegments[resIDIdx]
-	ctx := context.WithValue(r.Context(), ResIDCtxKey, resIDSegment)
-	r = r.WithContext(ctx)
-
-	resource := strings.ToLower(pathSegments[resIDIdx-1])
-
-	switch resource {
-	case "lists":
-		h.handleList(w, r)
-	default:
-		h.handleError(w, InvalidResourceErr)
 	}
 }
 
@@ -91,7 +57,7 @@ func (h *APIHandler) handleList(w http.ResponseWriter, r *http.Request) {
 
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		h.handleError(w, MethodNotAllowedErr)
+		h.handleError(w, 0, MethodNotAllowedErr)
 	}
 }
 
@@ -112,29 +78,33 @@ func (h *APIHandler) GetList(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := h.User(r)
 	if err != nil {
-		h.handleError(w, errors.Wrap(err, ""))
+		h.handleError(w, http.StatusNotFound, errors.Wrap(err))
 		return
 	}
 
-	listID, ok := h.resourceID(r)
+	resource, ok := h.resourceID(r)
 	if !ok {
-		h.handleError(w, errors.Wrap(NoResourceErr, "get list error"))
+		h.handleError(w, 0, errors.Wrap(NoResourceErr, "get list error"))
 		return
 	}
 
 	req := transport.GetListReq{
 		UserID: userID,
-		ListID: listID,
+		ListID: resource.L1ID(),
 	}
 
 	res := h.Service().GetList(ctx, req)
 	if err = res.Err(); err != nil {
 		err = errors.Wrap(err, "get list error")
-		h.handleError(w, err)
+		h.handleError(w, 0, err)
 		return
 	}
 
 	h.handleSuccess(w, res, 1, 1)
+}
+
+func (h *APIHandler) handleTask(w http.ResponseWriter, r *http.Request) {
+	h.Log().Error("not implemented yet")
 }
 
 func (h *APIHandler) handleOpenAPIDocs(w http.ResponseWriter, r *http.Request) {
@@ -143,34 +113,6 @@ func (h *APIHandler) handleOpenAPIDocs(w http.ResponseWriter, r *http.Request) {
 }
 
 // Helpers
-
-func (h *APIHandler) User(r *http.Request) (userID string, err error) {
-	// Authentication mechanism not yet established.
-	// WIP: A hardcoded value is returned for now.
-	uid := "0792b97b-4f88-42a8-a035-1d0aad0ae7f8"
-
-	ok := uuid.Validate(uid)
-	if !ok {
-		return "", NoUserErr
-	}
-
-	return uid, nil
-}
-
-// List returns the list ID from request context.
-func (h *APIHandler) List(r *http.Request) (listID string, err error) {
-	val := r.Context().Value(ListCtxKey)
-	if val != nil {
-		switch v := val.(type) {
-		case string:
-			return v, nil
-		default:
-			return listID, InvalidValueTypeErr
-		}
-	}
-
-	return listID, ListNotFoundErr
-}
 
 // closeBody close the body and log errors if happened.
 func (h *APIHandler) closeBody(body io.ReadCloser) {

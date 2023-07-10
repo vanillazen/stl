@@ -331,7 +331,7 @@ func (m *Migrator) Migrate() (err error) {
 			if err != nil {
 				return errors.Wrap(err, "migrate rollback error")
 			}
-			return errors.NewError(msg)
+			return errors.New(msg)
 		}
 
 		m.Log().Infof("Migration executed: %s", name)
@@ -410,7 +410,7 @@ func (m *Migrator) rollback(steps int) error {
 			if err != nil {
 				return errors.Wrap(err, "rollback rollback error")
 			}
-			return errors.NewError(msg)
+			return errors.New(msg)
 		}
 
 		processed++
@@ -599,7 +599,7 @@ func (m *Migrator) readMigQueries() ([]queries, error) {
 		sections := strings.Split(string(content), "--DOWN")
 		if len(sections) < 2 {
 			msg := fmt.Sprintf("invalid migration file format: %s", file.Name())
-			return nil, errors.NewError(msg)
+			return nil, errors.New(msg)
 		}
 
 		up := strings.TrimSpace(strings.TrimPrefix(sections[0], "--UP\n"))

@@ -23,11 +23,16 @@ func Newf(format string, ctxValues ...interface{}) error {
 	return Wrap(err, "")
 }
 
-func Wrap(err error, context string) error {
+func Wrap(err error, context ...string) error {
+	var ctx string
+	if len(context) > 0 {
+		ctx = context[0]
+	}
+
 	stackTrace := extractStacktrace()
 	return &wrappedError{
 		err:        err,
-		context:    context,
+		context:    ctx,
 		stackTrace: stackTrace,
 	}
 }

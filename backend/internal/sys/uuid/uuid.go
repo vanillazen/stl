@@ -20,7 +20,7 @@ var (
 )
 
 var (
-	NotValidUUIDErr = errors.NewError("not a valid UUID")
+	NotValidUUIDErr = errors.New("not a valid UUID")
 )
 
 // NewUUID generates a new UUID.
