@@ -12,25 +12,33 @@ const (
 	skipNTraces = 4
 )
 
-func New(msg string) error {
+var (
+	Empty = Error{
+		err:        nil,
+		context:    "",
+		stackTrace: "",
+	}
+)
+
+func New(msg string) Error {
 	err := errors.New(msg)
 	return Wrap(err, "")
 }
 
-func Newf(format string, ctxValues ...interface{}) error {
+func Newf(format string, ctxValues ...interface{}) Error {
 	msg := fmt.Sprintf(format, ctxValues...)
 	err := errors.New(msg)
 	return Wrap(err, "")
 }
 
-func Wrap(err error, context ...string) error {
+func Wrap(err error, context ...string) Error {
 	var ctx string
 	if len(context) > 0 {
 		ctx = context[0]
 	}
 
 	stackTrace := extractStacktrace()
-	return &wrappedError{
+	return Error{
 		err:        err,
 		context:    ctx,
 		stackTrace: stackTrace,
@@ -42,18 +50,18 @@ func Wrapf(err error, format string, ctxValues ...interface{}) error {
 	return Wrap(err, context)
 }
 
-type wrappedError struct {
+type Error struct {
 	err        error
 	context    string
 	stackTrace string
 }
 
-func (we *wrappedError) Error() string {
-	return fmt.Sprintf("%s: %v\n%s", we.context, we.err, we.stackTrace)
+func (err Error) Error() string {
+	return fmt.Sprintf("%s: %v\n%s", err.context, err.err, err.stackTrace)
 }
 
-func (we *wrappedError) Unwrap() error {
-	return we.err
+func (err Error) Unwrap() error {
+	return err.err
 }
 
 func extractStacktrace() string {
@@ -71,7 +79,7 @@ func extractStacktrace() string {
 }
 
 func Stacktrace(err error) string {
-	if wrappedErr, ok := err.(*wrappedError); ok {
+	if wrappedErr, ok := err.(*Error); ok {
 		return wrappedErr.Error()
 	}
 	return err.Error()

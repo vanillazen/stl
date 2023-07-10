@@ -4,9 +4,16 @@
 test-selected:
 	clear
 	make -f makefile.test test-migrator
+	make -f makefile.test test-http
 
 ## Migrator
 .PHONY: test-migrator
 test-migrator:
 	go test -v -run TestMigrator -count=1 -timeout=10s internal/infra/migration/sqlite/*.go
+
+
+## HTTP
+.PHONY: test-http
+test-http:
+	go test -v -run TestGetResourceInfo -count=1 -timeout=10s internal/infra/http/*.go
 
