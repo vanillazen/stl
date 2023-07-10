@@ -6,19 +6,19 @@
     "paths": {
         "/api/v1/lists/{id}": {
             "get": {
-                "description": "Gets a list by its UUID",
+                "description": "Gets a list by its ID",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Lists"
                 ],
-                "summary": "Get list by UUID",
+                "summary": "Get list by ID",
                 "operationId": "get-list",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "List UUID formatted as an UUID string",
+                        "description": "List ID formatted as an UUID string",
                         "name": "id",
                         "in": "path",
                         "required": true
