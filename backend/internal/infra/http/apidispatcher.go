@@ -2,7 +2,6 @@ package http
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -10,6 +9,18 @@ import (
 	"github.com/vanillazen/stl/backend/internal/sys/uuid"
 )
 
+// ResourceInfo holds information extracted from a URL path. It captures the hierarchical levels and associated IDs
+// of a resource based on the segments in the URL path.
+//
+// For example, given the URL path "api/v1/books/123/chapters/456/paragraphs", the ResourceInfo struct would contain:
+// - Levels: ["lists", "tasks"]
+// - IDs: ["043a415f-93e3-4f95-97c6-b4d9ca564188"]
+// - Error: nil
+//
+// The Levels field represents the resource levels extracted from the URL path, such as "lists" and "tasks",
+// The IDs field stores the associated IDs for each level in the hierarchy, corresponding to the extracted levels.
+// The Error field will be nil if the URL path extraction is successful. Otherwise, if an error occurs during the extraction,
+// it will contain the corresponding error.
 type ResourceInfo struct {
 	Levels []string
 	IDs    []string
@@ -64,7 +75,7 @@ func getResourceInfo(parts []string) ResourceInfo {
 	for i := 0; i < levelsCount; i += 2 {
 		resourceInfo.Levels = append(resourceInfo.Levels, parts[i])
 		if i > 0 && !isValidID(parts[i+1]) {
-			resourceInfo.Error = fmt.Errorf("Invalid URL")
+			resourceInfo.Error = errors.New("Invalid URL")
 			return resourceInfo
 		}
 		resourceInfo.IDs = append(resourceInfo.IDs, parts[i+1])
@@ -92,7 +103,10 @@ func (h *APIHandler) User(r *http.Request) (userID string, err error) {
 	return uid, nil
 }
 
-func (ri ResourceInfo) L1() (l1 string) {
+// Level1 returns the first level of the resource extracted from the URL path.
+// If the Levels field has at least one element, Level1 returns that element.
+// Otherwise, it returns an empty string.
+func (ri ResourceInfo) Level1() (l1 string) {
 	if len(ri.Levels) > 0 {
 		return ri.Levels[0]
 	}
@@ -100,7 +114,10 @@ func (ri ResourceInfo) L1() (l1 string) {
 	return l1
 }
 
-func (ri ResourceInfo) L1ID() (l1id string) {
+// IDLevel1 returns the ID associated with the first level of the resource hierarchy.
+// If the IDs field has at least one element, IDLevel1 returns that element.
+// Otherwise, it returns an empty string.
+func (ri ResourceInfo) IDLevel1() (l1id string) {
 	if len(ri.IDs) > 0 {
 		return ri.IDs[0]
 	}
@@ -108,7 +125,10 @@ func (ri ResourceInfo) L1ID() (l1id string) {
 	return l1id
 }
 
-func (ri ResourceInfo) L2() (l2 string) {
+// Level2 returns the second level of the resource extracted from the URL path.
+// If the Levels field has at least two elements, Level2 returns the second element.
+// Otherwise, it returns an empty string.
+func (ri ResourceInfo) Level2() (l2 string) {
 	if len(ri.Levels) > 1 {
 		return ri.Levels[1]
 	}
@@ -116,7 +136,10 @@ func (ri ResourceInfo) L2() (l2 string) {
 	return l2
 }
 
-func (ri ResourceInfo) L2ID() (l2id string) {
+// IDLevel2 returns the ID associated with the second level of the resource hierarchy.
+// If the IDs field has at least two elements, IDLevel2 returns the second element.
+// Otherwise, it returns an empty string.
+func (ri ResourceInfo) IDLevel2() (l2id string) {
 	if len(ri.IDs) > 1 {
 		return ri.IDs[1]
 	}
@@ -124,7 +147,10 @@ func (ri ResourceInfo) L2ID() (l2id string) {
 	return l2id
 }
 
-func (ri ResourceInfo) L3() (l3 string) {
+// Level3 returns the third level of the resource extracted from the URL path.
+// If the Levels field has at least three elements, Level3 returns the third element.
+// Otherwise, it returns an empty string.
+func (ri ResourceInfo) Level3() (l3 string) {
 	if len(ri.Levels) > 2 {
 		return ri.Levels[2]
 	}
@@ -132,10 +158,13 @@ func (ri ResourceInfo) L3() (l3 string) {
 	return l3
 }
 
-func (ri ResourceInfo) L3ID() (l2id string) {
+// IDLevel3 returns the ID associated with the third level of the resource hierarchy.
+// If the IDs field has at least three elements, IDLevel3 returns the third element.
+// Otherwise, it returns an empty string.
+func (ri ResourceInfo) IDLevel3() (l3id string) {
 	if len(ri.IDs) > 2 {
 		return ri.IDs[2]
 	}
 
-	return l2id
+	return l3id
 }
