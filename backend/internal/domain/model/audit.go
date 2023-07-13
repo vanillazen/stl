@@ -8,3 +8,10 @@ type (
 		UpdatedAt time.Time
 	}
 )
+
+func NewAudit(createdAt, updatedAt time.Time) Audit {
+	return Audit{
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
+	}
+}
