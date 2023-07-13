@@ -46,7 +46,7 @@ type (
 		Config(up MigFx, down MigFx)
 		GetIndex() (i int64)
 		GetName() (name string)
-		GetUp() (up MigFx)
+		GetSeeds() (up MigFx)
 		GetDown() (down MigFx)
 		SetTx(tx *sql.Tx)
 		GetTx() (tx *sql.Tx)
@@ -111,7 +111,7 @@ func (m *Migrator) Start(ctx context.Context) error {
 		return errors.Wrapf(err, "%s start error", m.Name())
 	}
 
-	return m.Migrate()
+	return m.Seed()
 }
 
 func (m *Migrator) Connect() error {
@@ -281,7 +281,7 @@ func (m *Migrator) AddMigration(o int, e Exec) {
 	m.steps = append(m.steps, mig)
 }
 
-func (m *Migrator) Migrate() (err error) {
+func (m *Migrator) Seed() (err error) {
 	err = m.PreSetup()
 	if err != nil {
 		return errors.Wrap(err, "migrate error")
@@ -292,7 +292,7 @@ func (m *Migrator) Migrate() (err error) {
 		exec := mg.Executor
 		idx := exec.GetIndex()
 		name := exec.GetName()
-		upFx := exec.GetUp()
+		upFx := exec.GetSeeds()
 
 		// Get a new Tx from migrator
 		tx, err := m.GetTx()
@@ -430,7 +430,7 @@ func (m *Migrator) SoftReset() error {
 		return err
 	}
 
-	err = m.Migrate()
+	err = m.Seed()
 	if err != nil {
 		log.Printf("Cannot migrate database: %s", err.Error())
 		return err
@@ -451,7 +451,7 @@ func (m *Migrator) Reset() error {
 		return errors.Wrap(err, "create database error")
 	}
 
-	err = m.Migrate()
+	err = m.Seed()
 	if err != nil {
 		return errors.Wrap(err, "drop database error")
 	}

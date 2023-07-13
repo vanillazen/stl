@@ -22,12 +22,18 @@ var (
 	//go:embed all:assets/migrations/sqlite/*.sql
 	migFs embed.FS
 
+	//go:embed all:assets/seeding/sqlite/*.sql
+	seedFs embed.FS
+
 	//go:embed api/openapi/openapi.html
 	openapiDoc string
 )
 
 func main() {
-	app := a.NewApp(name, env, openapiDoc, migFs, log)
+	app := a.NewApp(name, env, log)
+	app.SetMigratorFs(migFs)
+	app.SetSeederFs(seedFs)
+	app.SetAPIDoc(openapiDoc)
 
 	err := app.Run()
 	if err != nil {

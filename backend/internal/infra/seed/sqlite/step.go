@@ -6,15 +6,13 @@ type (
 	step struct {
 		Index int64
 		Name  string
-		Up    MigFx
-		Down  MigFx
+		Seeds []SeedFx
 		tx    *sql.Tx
 	}
 )
 
-func (s *step) Config(up MigFx, down MigFx) {
-	s.Up = up
-	s.Down = down
+func (s *step) Config(seed []SeedFx) {
+	s.Seeds = seed
 }
 
 func (s *step) GetIndex() (idx int64) {
@@ -25,12 +23,8 @@ func (s *step) GetName() (name string) {
 	return s.Name
 }
 
-func (s *step) GetSeeds() (up MigFx) {
-	return s.Up
-}
-
-func (s *step) GetDown() (down MigFx) {
-	return s.Down
+func (s *step) GetSeeds() (seeds []SeedFx) {
+	return s.Seeds
 }
 
 func (s *step) SetTx(tx *sql.Tx) {
