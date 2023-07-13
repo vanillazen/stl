@@ -62,13 +62,13 @@ import (
   "github.com/vanillazen/stl/backend/internal/infra/migration/sqlite"
 )
 
-//go:embed assets/migrations/sqlite/*.sql
+//go:embed assets/seeding/sqlite/*.sql
 var fs embed.FS
 
 // ...
 mig := migrator.NewMigrator(fs, db, opts)
 
-err := mig.Migrate() // Apply the pending migrations
+err := mig.Migrate() // Apply the pending seeding
 if err != nil {
     // Handle error
 }
@@ -90,7 +90,7 @@ creaed_at: 2023-06-29T20:46:56+02:00
 If you need to revert a migration, the Migrator package provides two options: `Rollback()` and `RollbackAll()`.
 
 ```go
-err := migratorInstance.Rollback(2) // Rollback the last 2 migrations
+err := migratorInstance.Rollback(2) // Rollback the last 2 seeding
 if err != nil {
     // Handle error
 }
@@ -102,7 +102,7 @@ The `Rollback()` function rolls back a specific number of migrations. In the exa
 To rollback all migrations, you can use the `RollbackAll()` function:
 
 ```go
-err := mig.RollbackAll() // Rollback all migrations
+err := mig.RollbackAll() // Rollback all seeding
 if err != nil {
     // Handle error
 }
