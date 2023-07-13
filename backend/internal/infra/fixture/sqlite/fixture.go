@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"log"
-	"strings"
 	"time"
 
+	"github.com/vanillazen/stl/backend/internal/domain/model"
 	"github.com/vanillazen/stl/backend/internal/infra/db"
 	"github.com/vanillazen/stl/backend/internal/sys"
 	"github.com/vanillazen/stl/backend/internal/sys/uuid"
@@ -74,33 +74,27 @@ func (f *Fixture) PopulateDB() error {
 	dbase := f.DB()
 
 	// Users
-	users := []User{
+	users := []model.User{
 		{
-			ID:        "0792b97b-4f88-42a8-a035-1d0aad0ae7f8",
-			Username:  "user1",
-			Name:      "User 1",
-			Email:     "user1@example.com",
-			Password:  "password1",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:       model.NewID(uuid.MustParse("0792b97b-4f88-42a8-a035-1d0aad0ae7f8")),
+			Username: "user1",
+			Name:     "User 1",
+			Email:    "user1@example.com",
+			Password: "password1",
 		},
 		{
-			ID:        genID(),
-			Username:  "user2",
-			Name:      "User 2",
-			Email:     "user2@example.com",
-			Password:  "password2",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:       model.NewID(uuid.NewUUID()),
+			Username: "user2",
+			Name:     "User 2",
+			Email:    "user2@example.com",
+			Password: "password2",
 		},
 		{
-			ID:        genID(),
-			Username:  "user3",
-			Name:      "User 3",
-			Email:     "user3@example.com",
-			Password:  "password3",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			ID:       model.NewID(uuid.NewUUID()),
+			Username: "user3",
+			Name:     "User 3",
+			Email:    "user3@example.com",
+			Password: "password3",
 		},
 	}
 
@@ -109,46 +103,46 @@ func (f *Fixture) PopulateDB() error {
 	}
 
 	// Lists
-	lists := []List{
+	lists := []model.List{
 		{
-			ID:          "cdc7a443-3c6a-431b-b45a-b14735953a19",
+			ID:          model.NewID(uuid.MustParse("cdc7a443-3c6a-431b-b45a-b14735953a19")),
 			Name:        "List 1",
 			Description: "List 1 Description",
-			OwnerID:     users[0].ID,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			Owner:       users[0],
+			Tasks:       []model.Task{},
+			Audit:       model.NewAudit(time.Now(), time.Now()),
 		},
 		{
-			ID:          genID(),
+			ID:          model.NewID(uuid.NewUUID()),
 			Name:        "List 2",
 			Description: "List 2 Description",
-			OwnerID:     users[1].ID,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			Owner:       users[1],
+			Tasks:       []model.Task{},
+			Audit:       model.NewAudit(time.Now(), time.Now()),
 		},
 		{
-			ID:          genID(),
+			ID:          model.NewID(uuid.NewUUID()),
 			Name:        "List 3",
 			Description: "List 3 Description",
-			OwnerID:     users[1].ID,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			Owner:       users[1],
+			Tasks:       []model.Task{},
+			Audit:       model.NewAudit(time.Now(), time.Now()),
 		},
 		{
-			ID:          genID(),
+			ID:          model.NewID(uuid.NewUUID()),
 			Name:        "List 4",
 			Description: "List 4 Description",
-			OwnerID:     users[1].ID,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			Owner:       users[1],
+			Tasks:       []model.Task{},
+			Audit:       model.NewAudit(time.Now(), time.Now()),
 		},
 		{
-			ID:          genID(),
+			ID:          model.NewID(uuid.NewUUID()),
 			Name:        "List 5",
 			Description: "List 5 Description",
-			OwnerID:     users[2].ID,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			Owner:       users[2],
+			Tasks:       []model.Task{},
+			Audit:       model.NewAudit(time.Now(), time.Now()),
 		},
 	}
 
@@ -156,83 +150,57 @@ func (f *Fixture) PopulateDB() error {
 		insertList(dbase, list)
 	}
 
-	tasks := []Task{
+	// Tasks
+	tasks := []model.Task{
 		{
-			ID:          genID(),
-			ListID:      lists[0].ID,
+			ID:          model.NewID(uuid.NewUUID()),
+			ListID:      model.NewID(lists[0].ID.UUID),
 			Name:        "Task 1",
 			Description: "Task 1 Description",
 			Category:    []string{"Category 1"},
 			Tags:        []string{"Tag 1", "Tag 2"},
 			Location:    []string{"Location 1"},
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			Audit:       model.NewAudit(time.Now(), time.Now()),
 		},
 		{
-			ID:          genID(),
-			ListID:      lists[0].ID,
+			ID:          model.NewID(uuid.NewUUID()),
+			ListID:      model.NewID(lists[0].ID.UUID),
 			Name:        "Task 2",
 			Description: "Task 2 Description",
 			Category:    []string{"Category 2"},
-			Tags:        []string{"Tag 2", "Tag 3"},
+			Tags:        []string{"Tag 3", "Tag 4"},
 			Location:    []string{"Location 2"},
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			Audit:       model.NewAudit(time.Now(), time.Now()),
 		},
 		{
-			ID:          genID(),
-			ListID:      lists[0].ID,
+			ID:          model.NewID(uuid.NewUUID()),
+			ListID:      model.NewID(lists[1].ID.UUID),
 			Name:        "Task 3",
 			Description: "Task 3 Description",
-			Category:    []string{"Category 1", "Category 2"},
-			Tags:        []string{"Tag 1", "Tag 3"},
-			Location:    []string{"Location 1", "Location 2"},
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			Category:    []string{"Category 3"},
+			Tags:        []string{"Tag 5", "Tag 6"},
+			Location:    []string{"Location 3"},
+			Audit:       model.NewAudit(time.Now(), time.Now()),
 		},
 		{
-			ID:          genID(),
-			ListID:      lists[1].ID,
+			ID:          model.NewID(uuid.NewUUID()),
+			ListID:      model.NewID(lists[2].ID.UUID),
 			Name:        "Task 4",
 			Description: "Task 4 Description",
-			Category:    []string{"Category 3"},
-			Tags:        []string{"Tag 3", "Tag 4"},
-			Location:    []string{"Location 3"},
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			Category:    []string{"Category 4"},
+			Tags:        []string{"Tag 7", "Tag 8"},
+			Location:    []string{"Location 4"},
+			Audit:       model.NewAudit(time.Now(), time.Now()),
 		},
 		{
-			ID:          genID(),
-			ListID:      lists[1].ID,
+			ID:          model.NewID(uuid.NewUUID()),
+			ListID:      model.NewID(lists[3].ID.UUID),
 			Name:        "Task 5",
 			Description: "Task 5 Description",
-			Category:    []string{"Category 1", "Category 3"},
-			Tags:        []string{"Tag 1", "Tag 4"},
-			Location:    []string{"Location 1", "Location 3"},
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-		},
-		{
-			ID:          genID(),
-			ListID:      lists[2].ID,
-			Name:        "Task 6",
-			Description: "Task 6 Description",
-			Category:    []string{"Category 2", "Category 3"},
-			Tags:        []string{"Tag 2", "Tag 4"},
-			Location:    []string{"Location 2", "Location 3"},
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
-		},
-		{
-			ID:          genID(),
-			ListID:      lists[3].ID,
-			Name:        "Task 7",
-			Description: "Task 7 Description",
-			Category:    []string{"Category 1", "Category 3"},
-			Tags:        []string{"Tag 1", "Tag 4"},
-			Location:    []string{"Location 1", "Location 3"},
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			Category:    []string{"Category 5"},
+			Tags:        []string{"Tag 9", "Tag 10"},
+			Location:    []string{"Location 5"},
+			Audit:       model.NewAudit(time.Now(), time.Now()),
 		},
 	}
 
@@ -243,45 +211,37 @@ func (f *Fixture) PopulateDB() error {
 	return nil
 }
 
-func genID() string {
-	return uuid.Must().String()
+func insertUser(db *sql.DB, user model.User) {
+	query := `
+		INSERT INTO users (id, username, name, email, password)
+		VALUES (?, ?, ?, ?, ?)
+	`
+
+	_, err := db.Exec(query, user.ID.UUID.Val, user.Username, user.Name, user.Email, user.Password)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
-func insertUser(db *sql.DB, user User) {
+func insertList(db *sql.DB, list model.List) {
 	query := `
-		INSERT INTO users (id, username, name, email, password, created_at, updated_at)
+		INSERT INTO lists (id, name, description, owner_id)
+		VALUES (?, ?, ?, ?)
+	`
+
+	_, err := db.Exec(query, list.ID.UUID.Val, list.Name, list.Description, list.Owner.ID.UUID.Val)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func insertTask(db *sql.DB, task model.Task) {
+	query := `
+		INSERT INTO tasks (id, list_id, name, description, category, tags, location)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
 
-	_, err := db.Exec(query, user.ID, user.Username, user.Name, user.Email, user.Password, user.CreatedAt, user.UpdatedAt)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func insertList(db *sql.DB, list List) {
-	query := `
-		INSERT INTO lists (id, name, description, owner_id, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`
-
-	_, err := db.Exec(query, list.ID, list.Name, list.Description, list.OwnerID, list.CreatedAt, list.UpdatedAt)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func insertTask(db *sql.DB, task Task) {
-	query := `
-		INSERT INTO tasks (id, list_id, name, description, category, tags, location, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`
-
-	categoryStr := strings.Join(task.Category, ",")
-	tagsStr := strings.Join(task.Tags, ",")
-	locationStr := strings.Join(task.Location, ",")
-
-	_, err := db.Exec(query, task.ID, task.ListID, task.Name, task.Description, categoryStr, tagsStr, locationStr, task.CreatedAt, task.UpdatedAt)
+	_, err := db.Exec(query, task.ID.UUID.Val, task.ListID.UUID.Val, task.Name, task.Description, task.Category, task.Tags, task.Location)
 	if err != nil {
 		log.Fatal(err)
 	}
