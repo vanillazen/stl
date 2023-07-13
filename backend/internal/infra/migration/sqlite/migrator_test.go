@@ -31,13 +31,13 @@ var (
 	cfg    *config.Config
 	opts   []sys.Option
 
-	assetsPath  = filepath.Join(tmpDir, "migrations")
-	assetsPath1 = filepath.Join(tmpDir, "migrations-1")
+	assetsPath  = filepath.Join(tmpDir, "seeding")
+	assetsPath1 = filepath.Join(tmpDir, "seeding-1")
 
-	//go:embed all:tmp/migrations/*.sql
+	//go:embed all:tmp/seeding/*.sql
 	fs embed.FS
 
-	//go:embed all:tmp/migrations-1/*.sql
+	//go:embed all:tmp/seeding-1/*.sql
 	fs1 embed.FS
 
 	key      = config.Key
@@ -588,7 +588,7 @@ func (r Result) Error() error {
 // Helpers
 
 func migRecords(dbase db.DB) (migRecords []MigrationRecord, err error) {
-	rows, err := dbase.DB().Query("SELECT id, idx, name, created_at FROM migrations")
+	rows, err := dbase.DB().Query("SELECT id, idx, name, created_at FROM seeding")
 	if err != nil {
 		return migRecords, err
 	}

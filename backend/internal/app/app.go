@@ -10,12 +10,12 @@ import (
 	"github.com/vanillazen/stl/backend/internal/domain/service"
 	"github.com/vanillazen/stl/backend/internal/infra/db"
 	"github.com/vanillazen/stl/backend/internal/infra/db/sqlite"
-	"github.com/vanillazen/stl/backend/internal/infra/fixture"
-	sqlite2 "github.com/vanillazen/stl/backend/internal/infra/fixture/sqlite"
 	http2 "github.com/vanillazen/stl/backend/internal/infra/http"
 	migrator "github.com/vanillazen/stl/backend/internal/infra/migration"
 	mig "github.com/vanillazen/stl/backend/internal/infra/migration/sqlite"
 	sqliterepo "github.com/vanillazen/stl/backend/internal/infra/repo/sqlite"
+	"github.com/vanillazen/stl/backend/internal/infra/seed"
+	sqlite2 "github.com/vanillazen/stl/backend/internal/infra/seed/sqlite"
 
 	"github.com/vanillazen/stl/backend/internal/sys"
 	"github.com/vanillazen/stl/backend/internal/sys/config"
@@ -27,18 +27,19 @@ type App struct {
 	sync.Mutex
 	sys.Core
 	opts       []sys.Option
-	fs         embed.FS
+	migFs      embed.FS
+	seedFs     embed.FS
 	supervisor sys.Supervisor
 	http       *http2.Server
 	db         db.DB
 	repo       port.ListRepo
 	migrator   migrator.Migrator
-	fixture    fixture.Fixture
+	seeder     seed.Seeder
 	svc        service.ListService
 	apiDoc     string
 }
 
-func NewApp(name, namespace string, apiDoc string, fs embed.FS, log log.Logger) (app *App) {
+func NewApp(name, namespace string, log log.Logger) (app *App) {
 	cfg := config.Load(namespace)
 
 	opts := []sys.Option{
@@ -47,13 +48,23 @@ func NewApp(name, namespace string, apiDoc string, fs embed.FS, log log.Logger) 
 	}
 
 	app = &App{
-		Core:   sys.NewCore(name, opts...),
-		opts:   opts,
-		fs:     fs,
-		apiDoc: apiDoc,
+		Core: sys.NewCore(name, opts...),
+		opts: opts,
 	}
 
 	return app
+}
+
+func (app *App) SetMigratorFs(fs embed.FS) {
+	app.migFs = fs
+}
+
+func (app *App) SetSeederFs(fs embed.FS) {
+	app.seedFs = fs
+}
+
+func (app *App) SetAPIDoc(doc string) {
+	app.apiDoc = doc
 }
 
 func (app *App) Run() (err error) {
@@ -74,10 +85,10 @@ func (app *App) Setup(ctx context.Context) error {
 	app.db = sqlite.NewDB(app.opts...)
 
 	// Migration
-	app.migrator = mig.NewMigrator(app.fs, app.db, app.opts...)
+	app.migrator = mig.NewMigrator(app.migFs, app.db, app.opts...)
 
 	// Pre-population
-	app.fixture = sqlite2.NewFixture(app.db, app.opts...)
+	app.seeder = sqlite2.NewSeeder(app.seedFs, app.db, app.opts...)
 
 	// Repos
 	app.repo = sqliterepo.NewListRepo(app.db, app.opts...)
@@ -120,7 +131,7 @@ func (app *App) Start(ctx context.Context) (err error) {
 		return err
 	}
 
-	err = app.fixture.Start(ctx)
+	err = app.seeder.Start(ctx)
 	if err != nil {
 		err = errors.Wrapf(err, "%s setup error", app.Name())
 		return err
