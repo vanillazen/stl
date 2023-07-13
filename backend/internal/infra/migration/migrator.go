@@ -7,19 +7,19 @@ import (
 type (
 	Migrator interface {
 		sys.Core
-		// Migrate applies pending migrations
-		Migrate() error
-		// Rollback reverts from one to N migrations already applied
+		// Migrate applies pending seeding
+		Seed() error
+		// Rollback reverts from one to N seeding already applied
 		Rollback(steps ...int) error
-		// RollbackAll reverts all migrations allready applied
+		// RollbackAll reverts all seeding allready applied
 		RollbackAll() error
-		// SoftReset apply all migrations again after rolling back all migrations.
+		// SoftReset apply all seeding again after rolling back all seeding.
 		SoftReset() error
-		// Reset apply all migrations again after dropping the database and recreating it
+		// Reset apply all seeding again after dropping the database and recreating it
 		Reset() error
-		// SetAssetsPath sets the path form where the migrations are read
+		// SetAssetsPath sets the path form where the seeding are read
 		SetAssetsPath(path string)
-		// AssetsPath returns the path form where the migrations are read
+		// AssetsPath returns the path form where the seeding are read
 		AssetsPath() string
 	}
 )
