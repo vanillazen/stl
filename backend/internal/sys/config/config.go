@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	namespace string // i.e.: MWZ, MYCVS, APP, etc...
+	namespace string
 	values    map[string]string
 	defaults  map[string]string
 	reload    bool
