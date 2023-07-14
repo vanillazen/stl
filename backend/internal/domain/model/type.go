@@ -8,23 +8,23 @@ import (
 
 type StringSlice []string
 
-func (s StringSlice) Scan(value interface{}) error {
+func (s *StringSlice) Scan(value interface{}) error {
 	switch v := value.(type) {
 	case []byte:
 		str := string(v)
 		if str == "" {
-			s = []string{}
+			*s = StringSlice{}
 		} else {
-			s = strings.Split(str, ",")
+			*s = StringSlice(strings.Split(str, ","))
 		}
 	case string:
 		if v == "" {
-			s = []string{}
+			*s = StringSlice{}
 		} else {
-			s = strings.Split(v, ",")
+			*s = StringSlice(strings.Split(v, ","))
 		}
 	case nil:
-		s = []string{}
+		s = &StringSlice{}
 	default:
 		return fmt.Errorf("unsupported scan, storing driver.Value type %T into type *[]string", value)
 	}
@@ -32,9 +32,9 @@ func (s StringSlice) Scan(value interface{}) error {
 	return nil
 }
 
-func (s StringSlice) Value() (driver.Value, error) {
-	if len(s) == 0 {
+func (s *StringSlice) Value() (driver.Value, error) {
+	if len(*s) == 0 {
 		return "", nil
 	}
-	return strings.Join(s, ","), nil
+	return strings.Join(*s, ","), nil
 }
