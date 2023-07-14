@@ -27,6 +27,48 @@ go run ./cmd/stl/main.go
 [INF] 2023/06/28 11:32:19 http-server listening at localhost:8080
 ```
 
+```shell
+$ make api/get-list 
+./scripts/curl/get-list.sh -h localhost -p 8080 -l cdc7a443-3c6a-431b-b45a-b14735953a19 --pretty
+Calling API endpoint: GET http://localhost:8080/api/v1/lists/cdc7a443-3c6a-431b-b45a-b14735953a19
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   394  100   394    0     0   237k      0 --:--:-- --:--:-- --:--:--  384k
+{
+  "count": 1,
+  "pages": 1,
+  "data": {
+    "UserID": "",
+    "Name": "List 1",
+    "Description": "List 1 Description",
+    "CreatedAt": "0001-01-01T00:00:00Z",
+    "UpdatedAt": "0001-01-01T00:00:00Z",
+    "Tasks": [
+      {
+        "Name": "Task 1",
+        "Description": "Task 1 Description",
+        "Category": [
+          "Category 1"
+        ],
+        "Tags": [
+          "Tag 1",
+          "Tag 2"
+        ],
+        "Location": [
+          "Location 1"
+        ],
+        "CreatedAt": "0001-01-01T00:00:00Z",
+        "UpdatedAt": "0001-01-01T00:00:00Z"
+      }
+    ]
+  },
+  "error": {
+    "OK": true
+  }
+}
+```
+
+
 ## API 
 * OpenAPI: [http://localhost:8080/api/v1/docs](http://localhost:8080/api/v1/docs)
 

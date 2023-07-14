@@ -2,7 +2,7 @@
 
 ################################################################################
 # Script: get-list.sh
-# Description: A shell script to call `get-list` API endpoint using curl.
+# Description: A shell script to call the `get-list` API endpoint using curl.
 #
 # Usage:
 #   ./api_call.sh [OPTIONS]
@@ -11,9 +11,10 @@
 #   -h, --host HOST       Specify the host (default: localhost)
 #   -p, --port PORT       Specify the port (default: 8081)
 #   -l, --list-id LIST_ID Specify the list ID (default: fa7af80c-63e0-413c-aa3d-b7e417459a69)
+#   -p, --pretty          Prettify the output using jq
 #
 # Example usage:
-#   ./scripts/curl/get-list.sh -h localhost -p 8080 -l fa7af80c-63e0-413c-aa3d-b7e417459a69
+#   ./scripts/curl/get-list.sh -h localhost -p 8080 -l fa7af80c-63e0-413c-aa3d-b7e417459a69 -p
 #
 ################################################################################
 
@@ -21,6 +22,7 @@
 default_host="localhost"
 default_port="8080"
 default_list_id="cdc7a443-3c6a-431b-b45a-b14735953a19"
+default_pretty="false"
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -37,6 +39,10 @@ while [[ $# -gt 0 ]]; do
       list_id="$2"
       shift 2
       ;;
+    --pretty)
+      pretty="true"
+      shift
+      ;;
     *)
       echo "Invalid argument: $1"
       exit 1
@@ -48,6 +54,7 @@ done
 host="${host:-$default_host}"
 port="${port:-$default_port}"
 list_id="${list_id:-$default_list_id}"
+pretty="${pretty:-$default_pretty}"
 
 # API endpoint
 url="http://$host:$port/api/v1/lists/$list_id"
@@ -56,4 +63,8 @@ url="http://$host:$port/api/v1/lists/$list_id"
 echo "Calling API endpoint: GET $url"
 
 # Call
-curl "$url"
+if [[ "$pretty" == "true" ]]; then
+  curl "$url" | jq
+else
+  curl "$url"
+fi
