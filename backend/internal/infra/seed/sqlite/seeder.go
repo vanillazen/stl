@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	seedTable = "seeding"
+	seedTable = "seeds"
 	seedPath  = "assets/seeding/sqlite"
 )
 
@@ -260,7 +260,7 @@ func (s *Seeder) createSeedsTable() (err error) {
 		return err
 	}
 
-	st := fmt.Sprintf(createSeederTable, seedTable)
+	st := fmt.Sprintf(createSeedsTable, seedTable)
 
 	_, err = tx.Exec(st)
 	if err != nil {
@@ -344,7 +344,7 @@ func (s *Seeder) Seed() (err error) {
 }
 
 func (s *Seeder) recSeed(e Exec) error {
-	st := fmt.Sprintf(insertSeederTable, seedTable)
+	st := fmt.Sprintf(insertIntoSeeds, seedTable)
 
 	uid := uuid.NewUUID()
 
@@ -363,7 +363,7 @@ func (s *Seeder) recSeed(e Exec) error {
 }
 
 func (s *Seeder) cancelRollback(index int64, name string, tx *sql.Tx) bool {
-	st := fmt.Sprintf(selFromSeedsTable, seedTable, index, name)
+	st := fmt.Sprintf(selectFromSeeds, seedTable, index, name)
 	r, err := tx.Query(st)
 
 	if err != nil {
@@ -386,7 +386,7 @@ func (s *Seeder) cancelRollback(index int64, name string, tx *sql.Tx) bool {
 }
 
 func (s *Seeder) canApplySeed(index int64, name string, tx *sql.Tx) bool {
-	st := fmt.Sprintf(selFromSeedsTable, seedTable, index, name)
+	st := fmt.Sprintf(selectFromSeeds, seedTable, index, name)
 	r, err := tx.Query(st)
 	defer r.Close()
 
