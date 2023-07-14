@@ -262,7 +262,7 @@ func (m *Migrator) createMigrationsTable() (err error) {
 		return err
 	}
 
-	st := fmt.Sprintf(createMigTable, migTable)
+	st := fmt.Sprintf(createMigrationsTable, migTable)
 
 	_, err = tx.Exec(st)
 	if err != nil {
@@ -460,7 +460,7 @@ func (m *Migrator) Reset() error {
 }
 
 func (m *Migrator) recMigration(e Exec) error {
-	st := fmt.Sprintf(insertMigTable, migTable)
+	st := fmt.Sprintf(insertIntoMigrations, migTable)
 
 	uid := uuid.NewUUID()
 
@@ -479,7 +479,7 @@ func (m *Migrator) recMigration(e Exec) error {
 }
 
 func (m *Migrator) cancelRollback(index int64, name string, tx *sql.Tx) bool {
-	st := fmt.Sprintf(selFromMigTable, migTable, index, name)
+	st := fmt.Sprintf(selectFromMigrations, migTable, index, name)
 	r, err := tx.Query(st)
 
 	if err != nil {
@@ -502,7 +502,7 @@ func (m *Migrator) cancelRollback(index int64, name string, tx *sql.Tx) bool {
 }
 
 func (m *Migrator) canApplyMigration(index int64, name string, tx *sql.Tx) bool {
-	st := fmt.Sprintf(selFromMigTable, migTable, index, name)
+	st := fmt.Sprintf(selectFromMigrations, migTable, index, name)
 	r, err := tx.Query(st)
 	defer r.Close()
 
@@ -533,7 +533,7 @@ func (m *Migrator) delMigration(e Exec) error {
 	idx := e.GetIndex()
 	name := e.GetName()
 
-	st := fmt.Sprintf(delFromMigTable, migTable, idx, name)
+	st := fmt.Sprintf(deleteFromMigrations, migTable, idx, name)
 	_, err := e.GetTx().Exec(st)
 
 	if err != nil {
