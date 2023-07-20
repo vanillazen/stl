@@ -88,7 +88,7 @@ func (h *APIHandler) GetList(w http.ResponseWriter, r *http.Request) {
 
 	resource, ok := h.resource(r)
 	if !ok {
-		h.handleError(w, 0, errors.Wrap(NoResourceErr, "get list error"))
+		h.handleError(w, http.StatusBadRequest, errors.Wrap(NoResourceErr, "get list error"))
 		return
 	}
 
@@ -100,7 +100,7 @@ func (h *APIHandler) GetList(w http.ResponseWriter, r *http.Request) {
 	res := h.Service().GetList(ctx, req)
 	if err = res.Err(); err != nil {
 		err = errors.Wrap(err, "get list error")
-		h.handleError(w, 0, err)
+		h.handleError(w, http.StatusNotFound, err)
 		return
 	}
 
