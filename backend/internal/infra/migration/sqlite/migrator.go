@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/vanillazen/stl/backend/internal/infra/db"
-	"github.com/vanillazen/stl/backend/internal/infra/db/sqlite"
 	"github.com/vanillazen/stl/backend/internal/sys"
 	"github.com/vanillazen/stl/backend/internal/sys/config"
 	"github.com/vanillazen/stl/backend/internal/sys/errors"
@@ -37,7 +36,7 @@ type (
 		sys.Core
 		assetsPath string
 		fs         embed.FS
-		db         db.DB
+		db         *sql.DB
 		steps      []Migration
 	}
 
@@ -46,7 +45,7 @@ type (
 		Config(up MigFx, down MigFx)
 		GetIndex() (i int64)
 		GetName() (name string)
-		GetSeeds() (up MigFx)
+		GetUp() (up MigFx)
 		GetDown() (down MigFx)
 		SetTx(tx *sql.Tx)
 		GetTx() (tx *sql.Tx)
@@ -80,12 +79,11 @@ var (
 	matchAllCap   = regexp.MustCompile("([a-z0-9])([A-Z])")
 )
 
-func NewMigrator(fs embed.FS, db db.DB, opts ...sys.Option) (mig *Migrator) {
+func NewMigrator(fs embed.FS, opts ...sys.Option) (mig *Migrator) {
 	m := &Migrator{
 		Core:       sys.NewCore("migrator", opts...),
 		assetsPath: migPath,
 		fs:         fs,
-		db:         db,
 	}
 
 	return m
@@ -99,19 +97,20 @@ func (m *Migrator) AssetsPath() string {
 	return m.assetsPath
 }
 
-func (m *Migrator) DB() *sql.DB {
-	return m.db.DB()
-}
-
 func (m *Migrator) Start(ctx context.Context) error {
-	m.Log().Infof("%s started", m.db.Name())
+	m.Log().Infof("%s started", m.Name())
 
-	err := m.addSteps()
+	err := m.Connect()
 	if err != nil {
 		return errors.Wrapf(err, "%s start error", m.Name())
 	}
 
-	return m.Seed()
+	err = m.addSteps()
+	if err != nil {
+		return errors.Wrapf(err, "%s start error", m.Name())
+	}
+
+	return m.Migrate()
 }
 
 func (m *Migrator) Connect() error {
@@ -119,23 +118,23 @@ func (m *Migrator) Connect() error {
 	//sqlDB, err := sql.Open("sqlite3", path)
 	sqlDB, err := sql.Open("sqlite3", path+"?_journal_mode=WAL")
 	if err != nil {
-		return errors.Wrapf(err, "%s connection error", m.db.Name())
+		return errors.Wrapf(err, "%s connection error", m.Name())
 	}
 
 	err = sqlDB.Ping()
 	if err != nil {
-		msg := fmt.Sprintf("%s ping connection error", m.db.Name())
+		msg := fmt.Sprintf("%s ping connection error", m.Name())
 		return errors.Wrap(err, msg)
 	}
 
-	m.db = sqlite.NewDB()
-	m.Log().Infof("%s database connected", m.db.Name())
+	m.db = sqlDB
+	m.Log().Infof("%s database connected", m.Name())
 	return nil
 }
 
 // GetTx returns a new transaction from migrator connection
 func (m *Migrator) GetTx() (tx *sql.Tx, err error) {
-	tx, err = m.db.DB().Begin()
+	tx, err = m.db.Begin()
 	if err != nil {
 		return tx, err
 	}
@@ -158,9 +157,9 @@ func (m *Migrator) PreSetup() (err error) {
 
 // dbExists returns true if migrator referenced database has been already created.
 func (m *Migrator) dbExists() bool {
-	st := fmt.Sprintf("SELECT name FROM sqlite_master WHERE type='database' AND name='%s';", m.db.Name())
+	st := fmt.Sprintf("SELECT name FROM sqlite_master WHERE type='database' AND name='%s';", m.Name())
 
-	rows, err := m.DB().Query(st)
+	rows, err := m.db.Query(st)
 	if err != nil {
 		m.Log().Infof("Error checking database: %w", err)
 		return false
@@ -184,7 +183,7 @@ func (m *Migrator) dbExists() bool {
 func (m *Migrator) migTableExists() bool {
 	st := fmt.Sprintf("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';", migTable)
 
-	rows, err := m.DB().Query(st)
+	rows, err := m.db.Query(st)
 	if err != nil {
 		m.Log().Errorf("Error checking database: %s", err)
 		return false
@@ -205,12 +204,6 @@ func (m *Migrator) migTableExists() bool {
 	return false
 }
 
-// CreateDb migration.
-func (m *Migrator) CreateDb() (dbPath string, err error) {
-	// NOTE: Not really required for SQLite
-	return m.db.Path(), nil
-}
-
 // DropDb migration.
 func (m *Migrator) DropDb() (dbPath string, err error) {
 	dbPath, err = m.CloseAppConns()
@@ -219,7 +212,7 @@ func (m *Migrator) DropDb() (dbPath string, err error) {
 	}
 
 	// Close the SQLite connection before dropping the database file
-	err = m.DB().Close()
+	err = m.db.Close()
 	if err != nil {
 		m.Log().Errorf("drop dbPath error: %w", err) // Maybe it was already closed.
 	}
@@ -235,12 +228,12 @@ func (m *Migrator) DropDb() (dbPath string, err error) {
 func (m *Migrator) CloseAppConns() (string, error) {
 	dbName := m.Cfg().GetString(config.Key.SQLiteFilePath)
 
-	err := m.DB().Close()
+	err := m.db.Close()
 	if err != nil {
 		return dbName, err
 	}
 
-	adminConn, err := sql.Open("sqlite3", m.db.Name())
+	adminConn, err := sql.Open("sqlite3", m.Name())
 	if err != nil {
 		return dbName, err
 	}
@@ -281,7 +274,7 @@ func (m *Migrator) AddMigration(o int, e Exec) {
 	m.steps = append(m.steps, mig)
 }
 
-func (m *Migrator) Seed() (err error) {
+func (m *Migrator) Migrate() (err error) {
 	err = m.PreSetup()
 	if err != nil {
 		return errors.Wrap(err, "migrate error")
@@ -292,7 +285,7 @@ func (m *Migrator) Seed() (err error) {
 		exec := mg.Executor
 		idx := exec.GetIndex()
 		name := exec.GetName()
-		upFx := exec.GetSeeds()
+		upFx := exec.GetUp()
 
 		// Get a new Tx from migrator
 		tx, err := m.GetTx()
@@ -430,7 +423,7 @@ func (m *Migrator) SoftReset() error {
 		return err
 	}
 
-	err = m.Seed()
+	err = m.Migrate()
 	if err != nil {
 		log.Printf("Cannot migrate database: %s", err.Error())
 		return err
@@ -446,12 +439,7 @@ func (m *Migrator) Reset() error {
 		// Don't return maybe it was not created before.
 	}
 
-	_, err = m.CreateDb()
-	if err != nil {
-		return errors.Wrap(err, "create database error")
-	}
-
-	err = m.Seed()
+	err = m.Migrate()
 	if err != nil {
 		return errors.Wrap(err, "drop database error")
 	}
