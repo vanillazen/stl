@@ -8,7 +8,7 @@ type (
 	Migrator interface {
 		sys.Core
 		// Migrate applies pending seeding
-		Seed() error
+		Migrate() error
 		// Rollback reverts from one to N seeding already applied
 		Rollback(steps ...int) error
 		// RollbackAll reverts all seeding allready applied

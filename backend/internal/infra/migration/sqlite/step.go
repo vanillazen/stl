@@ -25,7 +25,7 @@ func (s *step) GetName() (name string) {
 	return s.Name
 }
 
-func (s *step) GetSeeds() (up MigFx) {
+func (s *step) GetUp() (up MigFx) {
 	return s.Up
 }
 
