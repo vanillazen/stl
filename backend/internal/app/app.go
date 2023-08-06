@@ -85,7 +85,7 @@ func (app *App) Setup(ctx context.Context) error {
 	app.db = sqlite.NewDB(app.opts...)
 
 	// Migration
-	app.migrator = mig.NewMigrator(app.migFs, app.db, app.opts...)
+	app.migrator = mig.NewMigrator(app.migFs, app.opts...)
 
 	// Pre-population
 	app.seeder = sqlite2.NewSeeder(app.seedFs, app.db, app.opts...)
