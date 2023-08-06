@@ -18,9 +18,43 @@ definitions:
       ok:
         type: boolean
     type: object
+  transport.CreateListReq:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
 info:
   contact: {}
 paths:
+  /api/v1/lists:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new list with the provided details
+      operationId: create-list
+      parameters:
+      - description: List details
+        in: body
+        name: list
+        required: true
+        schema:
+          $ref: '#/definitions/transport.CreateListReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/http.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.APIResponse'
+      summary: Create a new list
+      tags:
+      - Lists
   /api/v1/lists/{id}:
     get:
       description: Gets a list by its ID
