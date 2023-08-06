@@ -127,8 +127,10 @@ func (m *Migrator) Connect() error {
 		return errors.Wrap(err, msg)
 	}
 
-	m.db = sqlDB
 	m.Log().Infof("%s database connected", m.Name())
+
+	m.db = sqlDB
+
 	return nil
 }
 
@@ -204,8 +206,8 @@ func (m *Migrator) migTableExists() bool {
 	return false
 }
 
-// DropDb migration.
-func (m *Migrator) DropDb() (dbPath string, err error) {
+// DropDB migration.
+func (m *Migrator) DropDB() (dbPath string, err error) {
 	dbPath, err = m.CloseAppConns()
 	if err != nil {
 		return dbPath, errors.Wrap(err, "drop db error")
@@ -433,7 +435,7 @@ func (m *Migrator) SoftReset() error {
 }
 
 func (m *Migrator) Reset() error {
-	_, err := m.DropDb()
+	_, err := m.DropDB()
 	if err != nil {
 		m.Log().Errorf("Drop database error: %w", err)
 		// Don't return maybe it was not created before.
@@ -467,10 +469,12 @@ func (m *Migrator) recMigration(e Exec) error {
 }
 
 func (m *Migrator) cancelRollback(index int64, name string, tx *sql.Tx) bool {
-	st := fmt.Sprintf(selectFromMigrations, migTable, index, name)
-	r, err := tx.Query(st)
+	query := `SELECT (COUNT(*) > 0) AS record_exists FROM %s 
+                                       WHERE idx = %d 
+                                           :AND name = '%s'`
 
-	if err != nil {
+	st := fmt.Sprintf(query, migTable, index, name)
+	r, err := tx.Query(st)
 		m.Log().Errorf("Cannot determine rollback status: %w", err)
 		return true
 	}
