@@ -4,6 +4,47 @@
         "contact": {}
     },
     "paths": {
+        "/api/v1/lists": {
+            "post": {
+                "description": "Creates a new list with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Lists"
+                ],
+                "summary": "Create a new list",
+                "operationId": "create-list",
+                "parameters": [
+                    {
+                        "description": "List details",
+                        "name": "list",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transport.CreateListReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/http.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/http.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/lists/{id}": {
             "get": {
                 "description": "Gets a list by its ID",
@@ -80,6 +121,20 @@
                 },
                 "ok": {
                     "type": "boolean"
+                }
+            }
+        },
+        "transport.CreateListReq": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "userID": {
+                    "type": "string"
                 }
             }
         }
