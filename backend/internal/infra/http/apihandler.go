@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -63,6 +64,49 @@ func (h *APIHandler) handleList(w http.ResponseWriter, r *http.Request) {
 
 func (h *APIHandler) GetLists(w http.ResponseWriter, r *http.Request) {
 	h.Log().Error("not implemented yet")
+}
+
+// CreateList creates a new list
+// @summary Create a new list
+// @description Creates a new list with the provided details
+// @id create-list
+// @accept json
+// @produce json
+// @Param list body transport.CreateListReq true "List name and description"
+// @Success 201 {object} APIResponse
+// @Success 400 {object} APIResponse
+// @Router /api/v1/lists [post]
+// @tags Lists
+func (h *APIHandler) CreateList(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userID, err := h.User(r)
+	if err != nil {
+		h.handleError(w, http.StatusNotFound, errors.Wrap(err))
+		return
+	}
+
+	var req transport.CreateListReq
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		h.handleError(w, http.StatusBadRequest, errors.Wrap(err, "invalid request payload"))
+		return
+	}
+
+	req.UserID = userID
+
+	res := h.Service().CreateList(ctx, req)
+	if err = res.Err(); err != nil {
+		err = errors.Wrap(err, "get list error")
+		h.handleError(w, http.StatusNotFound, err)
+		return
+	}
+
+	h.handleSuccess(w, res, 1, 1)
+
+	//h.Service().CreateList(ctx, list)
+	//
+	//h.handleSuccess(w, list, 1, 1)
 }
 
 // GetList return user list
